@@ -4,11 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gallery-Portfolio</title>
-    <link rel="stylesheet" href="public/styles.css?v=20260228-1" />
-    <link rel="stylesheet" href="public/gallery.css?v=20260228-1" />
+    <script>
+      (function () {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const raw = String(params.get("fullscreen") || "").trim().toLowerCase();
+          const waterfallValues = ["0", "false", "no", "off"];
+          const isWaterfall = waterfallValues.includes(raw);
+          document.documentElement.classList.add(isWaterfall ? "boot-waterfall" : "boot-fullscreen");
+        } catch (_) {
+          document.documentElement.classList.add("boot-fullscreen");
+        }
+      })();
+    </script>
+    <style>
+      html.boot-fullscreen body {
+        margin: 0;
+        background: #000;
+      }
+      html.boot-fullscreen body.app-booting > header,
+      html.boot-fullscreen body.app-booting > .gallery,
+      html.boot-fullscreen body.app-booting > .tag-filter,
+      html.boot-fullscreen body.app-booting > .tag-filter-vertical,
+      html.boot-fullscreen body.app-booting > footer,
+      html.boot-fullscreen body.app-booting > #myModal {
+        display: none !important;
+      }
+    </style>
+    <link rel="stylesheet" href="public/styles.css?v=20260228-2" />
+    <link rel="stylesheet" href="public/gallery.css?v=20260228-2" />
     <link rel="icon" href="public/assets/favicon.svg" type="image/svg+xml" />
   </head>
-  <body>
+  <body class="app-booting">
     <header>
       <h1>
         <a href="/" style="text-decoration: none; color: inherit;">Gallery-Portfolio</a>
@@ -59,11 +86,11 @@
     </div>
 
     <!-- 加载JavaScript模块 -->
-    <script src="public/data-loader.js?v=20260228-1"></script>
-    <script src="public/tag-filter.js?v=20260228-1"></script>
-    <script src="public/image-loader.js?v=20260228-1"></script>
-    <script src="public/auto-scroll.js?v=20260228-1"></script>
-    <script src="public/layout.js?v=20260228-1"></script>
-    <script src="public/gallery.js?v=20260228-1"></script>
+    <script src="public/data-loader.js?v=20260228-2"></script>
+    <script src="public/tag-filter.js?v=20260228-2"></script>
+    <script src="public/image-loader.js?v=20260228-2"></script>
+    <script src="public/auto-scroll.js?v=20260228-2"></script>
+    <script src="public/layout.js?v=20260228-2"></script>
+    <script src="public/gallery.js?v=20260228-2"></script>
   </body>
 </html> 

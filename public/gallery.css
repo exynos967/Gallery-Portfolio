@@ -17,6 +17,29 @@
   display: none;
 }
 
+body.app-booting {
+  overflow: hidden !important;
+}
+
+html.boot-fullscreen body.app-booting {
+  background: #000 !important;
+}
+
+html.boot-fullscreen body.app-booting header,
+html.boot-fullscreen body.app-booting .gallery,
+html.boot-fullscreen body.app-booting .tag-filter,
+html.boot-fullscreen body.app-booting .tag-filter-vertical,
+html.boot-fullscreen body.app-booting .scroll-to-bottom,
+html.boot-fullscreen body.app-booting .auto-scroll-indicator,
+html.boot-fullscreen body.app-booting footer,
+html.boot-fullscreen body.app-booting #myModal {
+  display: none !important;
+}
+
+html.boot-fullscreen body.app-booting #loading {
+  background: transparent !important;
+}
+
 body.single-image-mode {
   background: #000 !important;
   overflow: hidden !important;

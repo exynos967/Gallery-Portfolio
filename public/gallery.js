@@ -21,6 +21,7 @@ class Gallery {
         this.singleImageStage = document.getElementById('single-image-stage');
         this.singleImageElement = document.getElementById('single-image');
         this.loadingElement = document.getElementById('loading');
+        document.body.classList.add('app-booting');
 
         this.init();
     }
@@ -38,6 +39,7 @@ class Gallery {
         this.remoteConfig = await this.fetchRemoteConfig();
         this.applyRemoteConfigToDataLoader(this.remoteConfig);
         this.settings = this.getInitialSettings(this.remoteConfig);
+        this.applyBootDisplayMode(this.settings.fullscreen);
         this.dataLoader.setShuffleEnabled(this.settings.shuffle);
 
         await this.dataLoader.loadGalleryData();
@@ -52,6 +54,7 @@ class Gallery {
         this.initComponents();
         this.applyFullscreenMode(false);
         this.setupActionButtons();
+        this.markAppReady();
         this.autoScroll.setupScrollButtonVisibility();
         this.handleUrlParams();
         this.loadInitialImages();
@@ -181,6 +184,20 @@ class Gallery {
         if (this.loadingElement) {
             this.loadingElement.classList.add('hidden');
         }
+        this.markAppReady();
+    }
+
+    applyBootDisplayMode(isFullscreen) {
+        const root = document.documentElement;
+        root.classList.toggle('boot-fullscreen', Boolean(isFullscreen));
+        root.classList.toggle('boot-waterfall', !Boolean(isFullscreen));
+    }
+
+    markAppReady() {
+        document.body.classList.remove('app-booting');
+        const root = document.documentElement;
+        root.classList.remove('boot-fullscreen');
+        root.classList.remove('boot-waterfall');
     }
 
     handleUrlParams() {
