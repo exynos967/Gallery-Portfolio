@@ -564,7 +564,7 @@ class Gallery {
         if (this.fullscreenToggleBtn) {
             this.fullscreenToggleBtn.classList.toggle('active', false);
             this.fullscreenToggleBtn.setAttribute('aria-label', '开启全屏模式');
-            this.fullscreenToggleBtn.textContent = '⛶';
+            this.fullscreenToggleBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
         }
 
         if (this.shuffleToggleBtn) {
@@ -623,7 +623,7 @@ class Gallery {
 
         if (this.randomImageBtn) {
             this.randomImageBtn.disabled = true;
-            this.randomImageBtn.textContent = '⏳';
+            this.randomImageBtn.innerHTML = '<svg viewBox="0 0 24 24" class="spin-anim"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
         }
 
         try {
@@ -636,7 +636,7 @@ class Gallery {
             this.isRandomImageLoading = false;
             if (this.randomImageBtn) {
                 this.randomImageBtn.disabled = false;
-                this.randomImageBtn.textContent = '🎲';
+                this.randomImageBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="8.5" r="1.5"/><circle cx="8.5" cy="15.5" r="1.5"/><circle cx="15.5" cy="15.5" r="1.5"/><circle cx="12" cy="12" r="1.5"/></svg>';
             }
         }
     }

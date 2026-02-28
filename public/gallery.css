@@ -2,15 +2,15 @@
 .gallery {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8em; /* Increase gap to prevent overlap */
-  width: 80%;
-  max-width: 1200px;
-  margin: 150px auto 20px; /* Adjust for header and tag filter */
+  gap: 12px;
+  width: 88%;
+  max-width: 1400px;
+  margin: 120px auto 40px;
   padding: 10px;
-  flex-grow: 1; /* Ensure gallery takes up available space */
-  align-items: flex-start; /* Align items to the top */
-  opacity: 0; /* Start hidden */
-  transition: opacity 1s; /* Fade-in effect */
+  flex-grow: 1;
+  align-items: flex-start;
+  opacity: 0;
+  transition: opacity 0.8s ease;
 }
 
 .single-image-stage {
@@ -91,24 +91,27 @@ body.single-image-mode #single-image {
 
 .fullscreen-upload-btn {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  right: 24px;
+  bottom: 24px;
   display: none;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 999px;
-  background: rgba(17, 17, 17, 0.76);
-  color: #f8fafc;
-  font-size: 30px;
-  font-weight: 400;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(24, 24, 27, 0.72);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  color: #F8FAFC;
+  font-size: 24px;
+  font-weight: 300;
   line-height: 1;
   padding: 0;
   cursor: pointer;
   z-index: 5;
-  transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
@@ -116,12 +119,13 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 }
 
 .fullscreen-upload-btn:hover {
-  background: rgba(17, 17, 17, 0.92);
-  border-color: rgba(255, 255, 255, 0.66);
+  background: rgba(24, 24, 27, 0.88);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 .fullscreen-upload-btn:active {
-  transform: translateY(1px);
+  transform: scale(0.94);
 }
 
 .upload-btn-icon {
@@ -130,8 +134,8 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 34px;
-  margin-top: -2px;
+  font-size: 28px;
+  font-weight: 300;
 }
 
 .upload-modal {
@@ -141,7 +145,9 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
   align-items: center;
   justify-content: center;
   z-index: 20;
-  background: rgba(0, 0, 0, 0.62);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 20px;
 }
 
@@ -150,20 +156,23 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 }
 
 .upload-modal-card {
-  width: min(520px, calc(100vw - 32px));
-  background: #0f1115;
-  color: #f8fafc;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
-  padding: 18px;
+  width: min(480px, calc(100vw - 32px));
+  background: #18181B;
+  color: #F8FAFC;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  padding: 24px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .upload-modal-card h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: -0.01em;
 }
 
 .upload-modal-description {
@@ -199,11 +208,19 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 #upload-form input[type="file"] {
   width: 100%;
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.6);
-  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #F8FAFC;
   padding: 10px 12px;
   font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+#upload-form textarea:hover,
+#upload-form input[type="file"]:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 #upload-form textarea {
@@ -216,7 +233,7 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 .upload-btn-primary:focus-visible,
 .upload-btn-secondary:focus-visible,
 .fullscreen-upload-btn:focus-visible {
-  outline: 2px solid #d4af37;
+  outline: 2px solid #F8FAFC;
   outline-offset: 2px;
 }
 
@@ -231,30 +248,42 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 .upload-btn-secondary {
   min-height: 44px;
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  border: 1px solid transparent;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  padding: 0 16px;
+  font-family: inherit;
+  padding: 0 20px;
+  transition: background-color 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
 }
 
 .upload-btn-primary {
-  background: #d4af37;
-  border-color: #d4af37;
-  color: #171717;
+  background: #F8FAFC;
+  border-color: #F8FAFC;
+  color: #18181B;
 }
 
 .upload-btn-primary:hover {
-  background: #c49f25;
+  background: #e4e4e7;
+}
+
+.upload-btn-primary:active {
+  transform: scale(0.97);
 }
 
 .upload-btn-secondary {
-  background: rgba(15, 23, 42, 0.55);
-  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #F8FAFC;
 }
 
 .upload-btn-secondary:hover {
-  background: rgba(30, 41, 59, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.upload-btn-secondary:active {
+  transform: scale(0.97);
 }
 
 .upload-btn-primary:disabled,
@@ -298,7 +327,7 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 /* Keyframes for image fly-in effect */
 @keyframes flyIn {
   0% {
-    transform: translateY(30px); /* 减少初始位移距离，从100px减到30px */
+    transform: translateY(20px);
     opacity: 0;
   }
   100% {
@@ -316,6 +345,11 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+/* Spin animation for loading SVGs in buttons */
+.spin-anim {
+  animation: spin 0.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
 /* Loading spinner styles */
@@ -359,10 +393,13 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 
 /* EXIF info styles */
 .exif-info {
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 8px;
-  padding: 15px;
-  margin: 10px 0;
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
   text-align: left;
   max-width: 400px;
   margin-left: auto;
@@ -370,32 +407,32 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 }
 
 .exif-info p {
-  margin: 5px 0;
-  color: #fff;
-  font-size: 14px;
-  line-height: 1.4;
+  margin: 4px 0;
+  color: #e4e4e7;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .exif-info strong {
-  color: #4CAF50;
+  color: #F8FAFC;
   font-weight: 600;
 }
 
 /* Dark theme for EXIF info */
 body.dark .exif-info {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(39, 39, 42, 0.85);
 }
 
 body.dark .exif-info strong {
-  color: #81C784;
+  color: #F8FAFC;
 }
 
 .gallery .column {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.8em;
-  position: relative; /* 确保子元素的z-index正常工作 */
+  gap: 12px;
+  position: relative;
 }
 
 /* Modal styles */
@@ -408,36 +445,44 @@ body.dark .exif-info strong {
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   opacity: 1;
-  transition: opacity 0.3s ease; /* 添加平滑过渡 */
+  transition: opacity 0.3s ease;
 }
 
 .modal-content {
   margin: auto;
-  margin-top: 100px; /* Top margin */
+  margin-top: 80px;
   display: block;
   max-width: 90%;
-  max-height: 80%; /* Adjust to accommodate caption and exif-info */
+  max-height: 82%;
   width: auto;
   height: auto;
+  border-radius: 8px;
 }
 
 .close {
   position: absolute;
-  top: 15px;
-  right: 35px;
-  color: #fff;
-  font-size: 40px;
-  font-weight: bold;
-  transition: 0.3s;
+  top: 20px;
+  right: 28px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 32px;
+  font-weight: 300;
+  transition: color 0.2s ease;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close:hover,
 .close:focus {
-  color: #bbb;
+  color: #fff;
   text-decoration: none;
-  cursor: pointer;
 }
 
 #caption,
@@ -458,82 +503,109 @@ body.dark .exif-info strong {
 
 /* Dark theme styles */
 body.dark .gallery img {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6); /* Darker shadow for dark mode */
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 body.dark .gallery img.loaded:hover {
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.8); /* Darker shadow for hover in dark mode */
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 
 body.dark .close {
-  color: #e0e0e0;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+body.dark .close:hover {
+  color: #F8FAFC;
 }
 
 body.dark #caption,
 body.dark #exif-info {
-  color: #e0e0e0;
+  color: #e4e4e7;
 }
 
 #loading {
-  /* ... existing code ... */
-  background: rgba(255, 255, 255, 0.8); /* 添加半透明背景 */
+  background: transparent;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 /* 标签筛选样式 */
 .tag-filter {
     position: fixed;
-    top: 90px;
+    top: 82px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    flex-wrap: nowrap; /* 防止换行，使标签始终在同一行 */
-    gap: 10px;
-    padding: 10px;
-    /* width: 90%;          设置较窄的宽度 */
-    /* max-width: 600px;     最大宽度限制 */
-    max-width: 90%;     
-    background: rgba(250, 250, 250, 0.9);
-    border-radius: 20px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 6px 10px;
+    max-width: 90%;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     z-index: 100;
-    overflow-x: auto;     /* 启用横向滚动 */
+    overflow-x: auto;
     overflow-y: hidden;
-    -webkit-overflow-scrolling: touch; /* 平滑滚动 */
-    
-    /* 隐藏滚动条 */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE 10+ */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 .tag-filter::-webkit-scrollbar {
-    display: none; /* Chrome/Safari/Webkit */
+    display: none;
 }
 
 .tag {
-    padding: 5px 15px;
+    padding: 6px 16px;
     border: none;
-    border-radius: 15px;
-    background-color: #e1e1e1; 
+    border-radius: 10px;
+    background-color: var(--tag-bg);
+    color: var(--tag-text);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    white-space: nowrap;
+    user-select: none;
 }
 
 .tag:hover {
-    background: #45a049; /* 更深的绿色 */
+    background: #18181B;
+    color: #F8FAFC;
+}
+
+.tag:active {
+    transform: scale(0.95);
+}
+
+.tag.active {
+    background: var(--tag-active-bg);
+    color: var(--tag-active-text);
 }
 
 body.dark .tag-filter {
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(24, 24, 27, 0.78);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-color: rgba(255, 255, 255, 0.06);
 }
 
 body.dark .tag {
-    background: #333;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+    color: #a1a1aa;
 }
 
 body.dark .tag:hover {
-    background: #388E3C; /* 深色模式下的绿色 */
+    background: #F8FAFC;
+    color: #18181B;
+}
+
+body.dark .tag.active {
+    background: #F8FAFC;
+    color: #18181B;
 }
 
 .tag-filter-vertical {
@@ -544,11 +616,14 @@ body.dark .tag:hover {
     flex-direction: column;
     max-height: 150px;
     overflow-y: auto;
-    gap: 10px;
-    padding: 10px;
-    background: rgba(250, 250, 250, 0.9);
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    gap: 6px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
     z-index: 100;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -565,37 +640,37 @@ body.dark .tag:hover {
 .gallery img {
   width: 100%;
   object-fit: cover;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   opacity: 0;
-  transform: translateY(30px); /* 修改为与flyIn动画一致的值 */
+  transform: translateY(20px);
   position: relative;
   z-index: 1;
 }
 
 /* 已加载图片的基本样式 */
 .gallery img.loaded {
-  animation: flyIn 0.5s ease-out forwards; /* 将动画时间从0.8s减少到0.5s使动画更快 */
-  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1), 
-              box-shadow 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+  animation: flyIn 0.5s ease-out forwards;
+  transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+              box-shadow 0.4s cubic-bezier(0.19, 1, 0.22, 1),
               z-index 0.1s;
   will-change: transform, box-shadow;
-  opacity: 1; /* 确保图片可见，不依赖动画 */
+  opacity: 1;
 }
 
-/* 悬停样式 - 使用更长的动画时间 */
+/* 悬停样式 */
 .gallery img.loaded:hover,
 .gallery img.loaded.hover-active {
-  transform: translate(1px, -2px) !important;
-  box-shadow: -5px 12px 20px rgba(0, 0, 0, 0.5) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16) !important;
   z-index: 10 !important;
 }
 
 /* 深色模式下的效果 */
 body.dark .gallery img.loaded:hover,
 body.dark .gallery img.loaded.hover-active {
-  box-shadow: -5px 12px 20px rgba(0, 0, 0, 0.8) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* 添加悬停区域占位元素样式 */
@@ -609,7 +684,7 @@ body.dark .gallery img.loaded.hover-active {
 body.modal-open .gallery img:hover,
 body.modal-open .gallery img.hover-active {
   transform: none !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
   z-index: 1 !important;
   transition: none !important;
 }
@@ -617,29 +692,31 @@ body.modal-open .gallery img.hover-active {
 /* 改进悬停效果在模态关闭后的恢复 */
 body:not(.modal-open) .gallery img.loaded:hover,
 body:not(.modal-open) .gallery img.loaded.hover-active {
-  transition: transform 2s cubic-bezier(0.19, 1, 0.22, 1), 
-              box-shadow 2s cubic-bezier(0.19, 1, 0.22, 1) !important;
+  transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+              box-shadow 0.4s cubic-bezier(0.19, 1, 0.22, 1) !important;
 }
 
 /* 置底按钮样式 */
 .scroll-to-bottom {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    background: rgba(250, 250, 250, 0.9);
-    border: none;
-    border-radius: 50%;
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     z-index: 100;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.2s ease;
     opacity: 0;
-    transform: translateY(100px);
+    transform: translateY(60px);
 }
 
 .scroll-to-bottom.visible {
@@ -648,55 +725,62 @@ body:not(.modal-open) .gallery img.loaded.hover-active {
 }
 
 .scroll-to-bottom:hover {
-    background: rgba(240, 240, 240, 0.95);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .scroll-to-bottom:active {
-    transform: scale(0.95);
+    transform: scale(0.94);
 }
 
 .scroll-to-bottom svg {
-    width: 24px;
-    height: 24px;
-    fill: #666;
-    transition: fill 0.3s ease;
+    width: 20px;
+    height: 20px;
+    fill: #3f3f46;
+    transition: fill 0.2s ease;
 }
 
 .scroll-to-bottom:hover svg {
-    fill: #333;
+    fill: #18181B;
 }
 
 /* 深色模式样式 */
 body.dark .scroll-to-bottom {
-    background: rgba(50, 50, 50, 0.9);
+    background: rgba(39, 39, 42, 0.78);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border-color: rgba(255, 255, 255, 0.06);
 }
 
 body.dark .scroll-to-bottom:hover {
-    background: rgba(60, 60, 60, 0.95);
+    background: rgba(39, 39, 42, 0.92);
 }
 
 body.dark .scroll-to-bottom svg {
-    fill: #ccc;
+    fill: #a1a1aa;
 }
 
 body.dark .scroll-to-bottom:hover svg {
-    fill: #fff;
+    fill: #F8FAFC;
 }
 
 /* 自动滚动指示器 */
 .auto-scroll-indicator {
     position: fixed;
-    bottom: 80px;
-    right: 20px;
-    padding: 8px 12px;
-    background: rgba(250, 250, 250, 0.9);
-    border-radius: 15px;
+    bottom: 76px;
+    right: 24px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
     font-size: 12px;
-    color: #666;
+    font-family: inherit;
+    color: #3f3f46;
     opacity: 0;
-    transform: translateX(100px);
-    transition: all 0.3s ease;
+    transform: translateX(60px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
     z-index: 100;
     pointer-events: none;
 }
@@ -707,6 +791,7 @@ body.dark .scroll-to-bottom:hover svg {
 }
 
 body.dark .auto-scroll-indicator {
-    background: rgba(50, 50, 50, 0.9);
-    color: #ccc;
+    background: rgba(39, 39, 42, 0.78);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #a1a1aa;
 }

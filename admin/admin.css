@@ -1,14 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
 :root {
-  --bg: #f4f6f8;
+  --bg: #FAFAFA;
   --surface: #ffffff;
-  --surface-border: #d9e0e7;
-  --text: #171717;
-  --text-secondary: #4b5563;
-  --primary: #171717;
-  --primary-hover: #2d2d2d;
-  --danger: #b42318;
-  --focus: #2563eb;
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --surface-border: rgba(0, 0, 0, 0.06);
+  --text: #18181B;
+  --text-secondary: #71717A;
+  --primary: #18181B;
+  --primary-hover: #27272A;
+  --danger: #dc2626;
+  --focus: #18181B;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --input-border: #e4e4e7;
+  --input-hover-border: #a1a1aa;
 }
 
 * {
@@ -22,27 +26,29 @@ body {
 }
 
 body {
-  font-family: "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Space Grotesk", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .admin-shell {
-  width: min(960px, 100%);
+  width: min(880px, 100%);
   margin: 0 auto;
-  padding: 24px 16px 40px;
+  padding: 32px 20px 48px;
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--surface-border);
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: var(--shadow);
-  padding: 20px;
+  padding: 28px;
 }
 
 .hidden {
@@ -53,34 +59,42 @@ h1,
 h2,
 h3 {
   margin: 0 0 8px;
+  letter-spacing: -0.02em;
 }
 
 h1 {
   font-size: 1.5rem;
+  font-weight: 600;
 }
 
 h2 {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
 h3 {
-  margin-top: 18px;
-  font-size: 1rem;
+  margin-top: 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .subtitle {
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 form {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
@@ -90,16 +104,24 @@ textarea,
 button {
   min-height: 44px;
   border-radius: 10px;
-  border: 1px solid #c5ced8;
-  font-size: 0.95rem;
+  border: 1px solid var(--input-border);
+  font-size: 0.9rem;
+  font-family: inherit;
 }
 
 input,
 select,
 textarea {
-  padding: 10px 12px;
+  padding: 10px 14px;
   color: var(--text);
   background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--input-hover-border);
 }
 
 textarea {
@@ -111,18 +133,20 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 button:focus-visible {
-  outline: 2px solid transparent;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
   border-color: var(--focus);
+  box-shadow: none;
 }
 
 button {
-  padding: 0 16px;
+  padding: 0 20px;
   background: var(--primary);
-  color: #fff;
+  color: #F8FAFC;
   border: none;
   cursor: pointer;
-  transition: background-color 200ms ease, transform 200ms ease;
+  font-weight: 500;
+  transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
 button:hover {
@@ -130,34 +154,36 @@ button:hover {
 }
 
 button:active {
-  transform: translateY(1px);
+  transform: scale(0.97);
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .secondary-btn {
   background: #fff;
   color: var(--text);
-  border: 1px solid #c5ced8;
+  border: 1px solid var(--input-border);
 }
 
 .secondary-btn:hover {
-  background: #f7f8fa;
+  background: #FAFAFA;
+  border-color: var(--input-hover-border);
 }
 
 .panel-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 8px;
 }
 
 .domain-row {
   margin-top: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   display: grid;
   gap: 8px;
 }
@@ -171,7 +197,7 @@ button:disabled {
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .field {
@@ -186,7 +212,7 @@ button:disabled {
 .checkbox-field {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding-top: 30px;
 }
 
@@ -194,17 +220,24 @@ button:disabled {
   min-height: auto;
   width: 18px;
   height: 18px;
+  accent-color: #18181B;
+  cursor: pointer;
 }
 
 .checkbox-field label {
   margin: 0;
+  cursor: pointer;
 }
 
 .actions {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
+}
+
+.actions button[type="submit"] {
+  min-width: 120px;
 }
 
 .dir-input-row {
@@ -214,13 +247,13 @@ button:disabled {
 }
 
 .dir-picker {
-  margin-top: 8px;
-  border: 1px solid #d5dde6;
-  border-radius: 10px;
-  background: #f9fbfc;
-  padding: 10px;
+  margin-top: 10px;
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  background: #FAFAFA;
+  padding: 14px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .dir-toolbar {
@@ -232,7 +265,7 @@ button:disabled {
 .dir-current-path {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
 }
 
 .dir-breadcrumb {
@@ -243,8 +276,9 @@ button:disabled {
 
 .dir-breadcrumb button {
   min-height: 32px;
-  padding: 0 10px;
-  font-size: 0.82rem;
+  padding: 0 12px;
+  font-size: 0.8rem;
+  border-radius: 8px;
 }
 
 .dir-children {
@@ -255,14 +289,17 @@ button:disabled {
 
 .dir-node-btn {
   min-height: 36px;
-  padding: 0 12px;
+  padding: 0 14px;
   background: #fff;
   color: var(--text);
-  border: 1px solid #c5ced8;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  font-size: 0.85rem;
 }
 
 .dir-node-btn:hover {
-  background: #f1f5f9;
+  background: #FAFAFA;
+  border-color: var(--input-hover-border);
 }
 
 .dir-empty {
@@ -272,26 +309,61 @@ button:disabled {
 }
 
 .status-card {
-  background: #101828;
-  color: #f8fafc;
+  background: #18181B;
+  color: #F8FAFC;
+  border-color: transparent;
 }
 
 #status-text {
   margin: 0;
   min-height: 24px;
+  font-size: 0.9rem;
 }
 
 #status-text[data-level="error"] {
-  color: #fda29b;
+  color: #fca5a5;
 }
 
 #status-text[data-level="success"] {
-  color: #75e0a7;
+  color: #86efac;
+}
+
+/* Login panel special styles */
+#login-panel {
+  max-width: 420px;
+  margin: 80px auto 0;
+  text-align: center;
+}
+
+#login-panel h1 {
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+#login-panel .subtitle {
+  margin-bottom: 24px;
+}
+
+#login-panel form {
+  text-align: left;
+}
+
+#login-panel button[type="submit"] {
+  width: 100%;
+  min-height: 48px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 4px;
 }
 
 @media (max-width: 768px) {
+  .admin-shell {
+    padding: 20px 16px 40px;
+  }
+
   .card {
-    padding: 16px;
+    padding: 20px;
+    border-radius: 14px;
   }
 
   .panel-header {
@@ -313,6 +385,10 @@ button:disabled {
 
   .checkbox-field {
     padding-top: 4px;
+  }
+
+  #login-panel {
+    margin-top: 40px;
   }
 }
 
