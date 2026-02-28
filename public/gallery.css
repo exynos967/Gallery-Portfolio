@@ -196,7 +196,8 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 
 #upload-form {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
 }
 
 #upload-form label {
@@ -204,42 +205,105 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
   color: #cbd5e1;
 }
 
-#upload-form textarea,
-#upload-form input[type="file"] {
+/* Dropzone click-to-upload area */
+.upload-dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   width: 100%;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: #F8FAFC;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-family: inherit;
+  min-height: 180px;
+  border-radius: 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
   transition: border-color 0.2s ease, background-color 0.2s ease;
+  padding: 24px 16px;
+  box-sizing: border-box;
 }
 
-#upload-form textarea:hover,
-#upload-form input[type="file"]:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+.upload-dropzone:hover {
+  border-color: rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.06);
 }
 
-#upload-form textarea {
-  resize: vertical;
-  min-height: 88px;
+.upload-dropzone:active {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-#upload-form textarea:focus-visible,
-#upload-form input[type="file"]:focus-visible,
-.upload-btn-primary:focus-visible,
-.upload-btn-secondary:focus-visible,
-.fullscreen-upload-btn:focus-visible {
+.upload-dropzone.has-file {
+  border-color: rgba(134, 239, 172, 0.5);
+  background: rgba(134, 239, 172, 0.06);
+}
+
+.upload-dropzone-icon {
+  width: 40px;
+  height: 40px;
+  color: rgba(255, 255, 255, 0.35);
+  transition: color 0.2s ease;
+}
+
+.upload-dropzone:hover .upload-dropzone-icon {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.upload-dropzone.has-file .upload-dropzone-icon {
+  color: #86efac;
+}
+
+.upload-dropzone-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: inherit;
+  transition: color 0.2s ease;
+}
+
+.upload-dropzone:hover .upload-dropzone-text {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.upload-dropzone.has-file .upload-dropzone-text {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+}
+
+.upload-dropzone-filename {
+  font-size: 14px;
+  font-weight: 500;
+  color: #F8FAFC;
+  word-break: break-all;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.upload-dropzone-filename:empty {
+  display: none;
+}
+
+/* Hide the native file input */
+.upload-dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-height: auto;
+}
+
+.upload-dropzone:focus-visible {
   outline: 2px solid #F8FAFC;
   outline-offset: 2px;
 }
 
 .upload-modal-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 4px;
 }
@@ -290,6 +354,13 @@ body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
 .upload-btn-secondary:disabled {
   opacity: 0.62;
   cursor: not-allowed;
+}
+
+.upload-btn-primary:focus-visible,
+.upload-btn-secondary:focus-visible,
+.fullscreen-upload-btn:focus-visible {
+  outline: 2px solid #F8FAFC;
+  outline-offset: 2px;
 }
 
 .upload-feedback {

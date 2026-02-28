@@ -34,7 +34,8 @@ class Gallery {
         this.uploadTitleElement = document.getElementById('upload-modal-title');
         this.uploadDescriptionElement = document.getElementById('upload-modal-description');
         this.uploadTargetDirElement = document.getElementById('upload-folder-label');
-        this.uploadDescriptionInput = document.getElementById('upload-user-description');
+        this.uploadDropzone = document.getElementById('upload-dropzone');
+        this.uploadFileNameElement = document.getElementById('upload-file-name');
         this.uploadFileInput = document.getElementById('upload-file-input');
         this.uploadStatusElement = document.getElementById('upload-feedback');
         this.uploadSubmitBtn = document.getElementById('upload-submit-btn');
@@ -298,7 +299,7 @@ class Gallery {
             buttonText: normalizeText(uploadConfig.buttonText, '上传图片', 24),
             description: normalizeText(
                 uploadConfig.description,
-                '请填写图片描述并选择图片后上传。',
+                '点击下方区域选择图片后上传。',
                 500
             ),
         };
@@ -326,7 +327,7 @@ class Gallery {
         }
         if (this.uploadDescriptionElement) {
             this.uploadDescriptionElement.textContent =
-                this.uploadSettings.description || '请填写图片描述并选择图片后上传。';
+                this.uploadSettings.description || '点击下方区域选择图片后上传。';
         }
         if (this.uploadTargetDirElement) {
             const targetDir = this.getUploadTargetDir();
@@ -339,6 +340,27 @@ class Gallery {
         this.fullscreenUploadBtn.addEventListener('click', () => {
             this.openUploadModal();
         });
+
+        if (this.uploadFileInput) {
+            this.uploadFileInput.addEventListener('change', () => {
+                const file = this.uploadFileInput.files?.[0];
+                if (this.uploadDropzone) {
+                    this.uploadDropzone.classList.toggle('has-file', Boolean(file));
+                }
+                if (this.uploadFileNameElement) {
+                    this.uploadFileNameElement.textContent = file ? file.name : '';
+                }
+            });
+        }
+
+        if (this.uploadDropzone) {
+            this.uploadDropzone.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    this.uploadFileInput?.click();
+                }
+            });
+        }
 
         if (this.uploadCancelBtn) {
             this.uploadCancelBtn.addEventListener('click', () => {
@@ -376,9 +398,6 @@ class Gallery {
         }
         this.setUploadStatus('', 'info');
         this.uploadModal.classList.remove('upload-hidden');
-        if (this.uploadDescriptionInput) {
-            this.uploadDescriptionInput.focus();
-        }
     }
 
     closeUploadModal() {
@@ -386,6 +405,12 @@ class Gallery {
         this.uploadModal.classList.add('upload-hidden');
         if (this.uploadForm) {
             this.uploadForm.reset();
+        }
+        if (this.uploadDropzone) {
+            this.uploadDropzone.classList.remove('has-file');
+        }
+        if (this.uploadFileNameElement) {
+            this.uploadFileNameElement.textContent = '';
         }
         this.setUploadStatus('', 'info');
     }
@@ -398,7 +423,6 @@ class Gallery {
 
     async handleUploadSubmit() {
         const file = this.uploadFileInput?.files?.[0];
-        const description = String(this.uploadDescriptionInput?.value || '').trim().slice(0, 500);
 
         if (!file) {
             this.setUploadStatus('请先选择一张图片。', 'error');
@@ -407,7 +431,6 @@ class Gallery {
 
         const formData = new FormData();
         formData.append('file', file, file.name);
-        formData.append('description', description);
 
         if (this.uploadSubmitBtn) {
             this.uploadSubmitBtn.disabled = true;
