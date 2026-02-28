@@ -11,10 +11,18 @@ export async function onRequestGet(context) {
   const domain = normalizeDomain(url.searchParams.get("domain"), pickRequestDomain(request));
   const configResult = await getDomainConfig(env, domain);
 
-  return json({
-    success: true,
-    domain,
-    config: toPublicConfig(configResult.config),
-    storageBackend: configResult.backend,
-  });
+  return json(
+    {
+      success: true,
+      domain,
+      matchedDomain: configResult.matchedDomain,
+      config: toPublicConfig(configResult.config),
+      storageBackend: configResult.backend,
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
+  );
 }

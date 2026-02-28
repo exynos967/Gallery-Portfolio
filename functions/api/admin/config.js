@@ -47,6 +47,7 @@ export async function onRequestGet(context) {
     success: true,
     data: {
       domain,
+      matchedDomain: configResult.matchedDomain,
       config: configResult.config,
       storageBackend: configResult.backend,
       existed: configResult.existed,

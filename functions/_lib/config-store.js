@@ -100,9 +100,17 @@ function makeDefaultConfig(env) {
   };
 }
 
-export async function getDomainConfig(env, domain) {
-  const backend = resolveStorageBackend(env);
-  let stored = null;
+function parseStoredConfig(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function readStoredConfigByDomain(env, backend, domain) {
+  if (!domain) return null;
 
   if (backend === "d1" && env.GALLERY_CONFIG_DB) {
     await ensureD1Schema(env);
@@ -111,24 +119,47 @@ export async function getDomainConfig(env, domain) {
     )
       .bind(domain)
       .first();
-    if (row?.config_json) {
-      try {
-        stored = JSON.parse(row.config_json);
-      } catch {
-        stored = null;
-      }
-    }
-  } else if (backend === "kv" && env.GALLERY_CONFIG_KV) {
+    return parseStoredConfig(row?.config_json);
+  }
+
+  if (backend === "kv" && env.GALLERY_CONFIG_KV) {
     const raw = await env.GALLERY_CONFIG_KV.get(`domain:${domain}`);
-    if (raw) {
-      try {
-        stored = JSON.parse(raw);
-      } catch {
-        stored = null;
-      }
+    return parseStoredConfig(raw);
+  }
+
+  return memoryStore.get(domain) || null;
+}
+
+function buildDomainCandidates(domain) {
+  const normalized = String(domain || "").trim().toLowerCase();
+  if (!normalized) return ["default"];
+
+  const candidates = [normalized];
+
+  if (normalized !== "default") {
+    if (normalized.startsWith("www.") && normalized.length > 4) {
+      candidates.push(normalized.slice(4));
+    } else {
+      candidates.push(`www.${normalized}`);
     }
-  } else {
-    stored = memoryStore.get(domain) || null;
+    candidates.push("default");
+  }
+
+  return [...new Set(candidates)];
+}
+
+export async function getDomainConfig(env, domain) {
+  const backend = resolveStorageBackend(env);
+  let stored = null;
+  let matchedDomain = null;
+  const domainCandidates = buildDomainCandidates(domain);
+
+  for (const candidate of domainCandidates) {
+    stored = await readStoredConfigByDomain(env, backend, candidate);
+    if (stored) {
+      matchedDomain = candidate;
+      break;
+    }
   }
 
   const defaults = makeDefaultConfig(env);
@@ -142,6 +173,7 @@ export async function getDomainConfig(env, domain) {
     backend,
     config: merged,
     existed: Boolean(stored),
+    matchedDomain,
   };
 }
 

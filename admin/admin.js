@@ -173,10 +173,14 @@
 
     try {
       const payload = await requestApi(`${API.config}?domain=${encodeURIComponent(domain)}`, {}, true);
-      const { config, storageBackend } = payload.data;
+      const { config, storageBackend, matchedDomain } = payload.data;
       latestConfig = config;
       fillConfigForm(config);
-      setStatus(`读取成功，当前存储：${storageBackend}`, "success");
+      const domainHint =
+        matchedDomain && matchedDomain !== domain
+          ? `（命中回退域名：${matchedDomain}）`
+          : "";
+      setStatus(`读取成功，当前存储：${storageBackend}${domainHint}`, "success");
     } catch (error) {
       if (error.status === 401) {
         token = "";
