@@ -29,7 +29,6 @@ class Gallery {
         this.loadingElement = document.getElementById('loading');
 
         this.fullscreenUploadBtn = document.getElementById('fullscreen-upload-btn');
-        this.fullscreenUploadBtnText = document.getElementById('fullscreen-upload-btn-text');
         this.uploadModal = document.getElementById('upload-modal');
         this.uploadForm = document.getElementById('upload-form');
         this.uploadTitleElement = document.getElementById('upload-modal-title');
@@ -317,8 +316,10 @@ class Gallery {
             return;
         }
 
-        if (this.fullscreenUploadBtnText) {
-            this.fullscreenUploadBtnText.textContent = this.uploadSettings.buttonText || '上传图片';
+        if (this.fullscreenUploadBtn) {
+            const uploadLabel = this.uploadSettings.buttonText || '上传图片';
+            this.fullscreenUploadBtn.setAttribute('aria-label', uploadLabel);
+            this.fullscreenUploadBtn.setAttribute('title', uploadLabel);
         }
         if (this.uploadTitleElement) {
             this.uploadTitleElement.textContent = this.uploadSettings.modalTitle || '上传图片';
