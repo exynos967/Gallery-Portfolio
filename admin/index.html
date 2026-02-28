@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gallery Admin</title>
-    <link rel="stylesheet" href="admin.css?v=20260228-2" />
+    <link rel="stylesheet" href="admin.css?v=20260228-3" />
   </head>
   <body>
     <main class="admin-shell">
@@ -147,6 +147,44 @@
             </div>
           </div>
 
+          <h3>前台上传弹窗</h3>
+          <div class="form-grid">
+            <div class="field checkbox-field">
+              <input id="public-upload-enabled" name="public-upload-enabled" type="checkbox" />
+              <label for="public-upload-enabled">开启全屏投稿上传</label>
+            </div>
+
+            <div class="field">
+              <label for="public-upload-button-text">按钮文案</label>
+              <input
+                id="public-upload-button-text"
+                name="public-upload-button-text"
+                type="text"
+                placeholder="上传图片"
+              />
+            </div>
+
+            <div class="field full-width">
+              <label for="public-upload-modal-title">弹窗标题</label>
+              <input
+                id="public-upload-modal-title"
+                name="public-upload-modal-title"
+                type="text"
+                placeholder="上传图片"
+              />
+            </div>
+
+            <div class="field full-width">
+              <label for="public-upload-description">弹窗说明文案（管理员自定义）</label>
+              <textarea
+                id="public-upload-description"
+                name="public-upload-description"
+                rows="3"
+                placeholder="请填写描述并上传图片，默认会上传到当前显示目录。"
+              ></textarea>
+            </div>
+          </div>
+
           <div class="actions">
             <button id="save-config-btn" type="submit">保存配置</button>
             <button id="reset-config-btn" class="secondary-btn" type="button">重置表单</button>
@@ -159,6 +197,6 @@
       </section>
     </main>
 
-    <script src="admin.js?v=20260228-2"></script>
+    <script src="admin.js?v=20260228-3"></script>
   </body>
 </html>

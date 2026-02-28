@@ -5,6 +5,12 @@ class Gallery {
             fullscreen: true,
             shuffle: true,
         };
+        this.uploadSettings = {
+            enabled: false,
+            modalTitle: '上传图片',
+            buttonText: '上传图片',
+            description: '请填写图片描述并选择图片后上传。',
+        };
         this.remoteConfig = null;
         this.dataLoader = new DataLoader();
         this.autoScroll = null;
@@ -21,6 +27,21 @@ class Gallery {
         this.singleImageStage = document.getElementById('single-image-stage');
         this.singleImageElement = document.getElementById('single-image');
         this.loadingElement = document.getElementById('loading');
+
+        this.fullscreenUploadBtn = document.getElementById('fullscreen-upload-btn');
+        this.fullscreenUploadBtnText = document.getElementById('fullscreen-upload-btn-text');
+        this.uploadModal = document.getElementById('upload-modal');
+        this.uploadForm = document.getElementById('upload-form');
+        this.uploadTitleElement = document.getElementById('upload-modal-title');
+        this.uploadDescriptionElement = document.getElementById('upload-modal-description');
+        this.uploadTargetDirElement = document.getElementById('upload-folder-label');
+        this.uploadDescriptionInput = document.getElementById('upload-user-description');
+        this.uploadFileInput = document.getElementById('upload-file-input');
+        this.uploadStatusElement = document.getElementById('upload-feedback');
+        this.uploadSubmitBtn = document.getElementById('upload-submit-btn');
+        this.uploadCancelBtn = document.getElementById('upload-cancel-btn');
+        this.uploadUiInitialized = false;
+
         document.body.classList.add('app-booting');
 
         this.init();
@@ -39,6 +60,7 @@ class Gallery {
         this.remoteConfig = await this.fetchRemoteConfig();
         this.applyRemoteConfigToDataLoader(this.remoteConfig);
         this.settings = this.getInitialSettings(this.remoteConfig);
+        this.uploadSettings = this.getUploadSettings(this.remoteConfig);
         this.applyBootDisplayMode(this.settings.fullscreen);
         this.dataLoader.setShuffleEnabled(this.settings.shuffle);
 
@@ -79,6 +101,7 @@ class Gallery {
 
     async initSingleImageMode() {
         document.body.classList.add('single-image-mode');
+        this.setupFullscreenUploadUi();
         const stage = this.ensureSingleImageStage();
         const imageData = await this.getSingleImageData();
 
@@ -247,6 +270,179 @@ class Gallery {
         root.classList.remove('boot-waterfall');
     }
 
+    normalizeDirPath(input) {
+        return String(input || '').trim().replace(/^\/+|\/+$/g, '');
+    }
+
+    getUploadTargetDir() {
+        const fromRemoteConfig = this.normalizeDirPath(
+            this.remoteConfig?.imgbed?.listDir || this.remoteConfig?.imgbed?.list_dir || ''
+        );
+        if (fromRemoteConfig) return fromRemoteConfig;
+
+        const sourceInfo = this.dataLoader.getSourceInfo?.() || {};
+        return this.normalizeDirPath(sourceInfo.list_dir || sourceInfo.listDir || '');
+    }
+
+    getUploadSettings(remoteConfig = null) {
+        const uploadConfig = remoteConfig?.publicUpload || {};
+        const normalizeText = (value, fallback, maxLength) => {
+            const text = String(value ?? '').trim();
+            const safeFallback = String(fallback ?? '').trim();
+            const resolved = text || safeFallback;
+            return maxLength ? resolved.slice(0, maxLength) : resolved;
+        };
+
+        return {
+            enabled: uploadConfig.enabled === true,
+            modalTitle: normalizeText(uploadConfig.modalTitle, '上传图片', 80),
+            buttonText: normalizeText(uploadConfig.buttonText, '上传图片', 24),
+            description: normalizeText(
+                uploadConfig.description,
+                '请填写图片描述并选择图片后上传。',
+                500
+            ),
+        };
+    }
+
+    setupFullscreenUploadUi() {
+        if (!this.fullscreenUploadBtn || !this.uploadModal) {
+            return;
+        }
+
+        const canUseUpload = this.uploadSettings.enabled === true;
+        this.fullscreenUploadBtn.classList.toggle('upload-hidden', !canUseUpload);
+        if (!canUseUpload) {
+            this.closeUploadModal();
+            return;
+        }
+
+        if (this.fullscreenUploadBtnText) {
+            this.fullscreenUploadBtnText.textContent = this.uploadSettings.buttonText || '上传图片';
+        }
+        if (this.uploadTitleElement) {
+            this.uploadTitleElement.textContent = this.uploadSettings.modalTitle || '上传图片';
+        }
+        if (this.uploadDescriptionElement) {
+            this.uploadDescriptionElement.textContent =
+                this.uploadSettings.description || '请填写图片描述并选择图片后上传。';
+        }
+        if (this.uploadTargetDirElement) {
+            const targetDir = this.getUploadTargetDir();
+            this.uploadTargetDirElement.textContent = targetDir ? `/${targetDir}` : '/';
+        }
+
+        if (this.uploadUiInitialized) return;
+        this.uploadUiInitialized = true;
+
+        this.fullscreenUploadBtn.addEventListener('click', () => {
+            this.openUploadModal();
+        });
+
+        if (this.uploadCancelBtn) {
+            this.uploadCancelBtn.addEventListener('click', () => {
+                this.closeUploadModal();
+            });
+        }
+
+        if (this.uploadModal) {
+            this.uploadModal.addEventListener('click', (event) => {
+                if (event.target === this.uploadModal) {
+                    this.closeUploadModal();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.uploadModal && !this.uploadModal.classList.contains('upload-hidden')) {
+                this.closeUploadModal();
+            }
+        });
+
+        if (this.uploadForm) {
+            this.uploadForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                this.handleUploadSubmit();
+            });
+        }
+    }
+
+    openUploadModal() {
+        if (!this.uploadModal) return;
+        if (this.uploadTargetDirElement) {
+            const targetDir = this.getUploadTargetDir();
+            this.uploadTargetDirElement.textContent = targetDir ? `/${targetDir}` : '/';
+        }
+        this.setUploadStatus('', 'info');
+        this.uploadModal.classList.remove('upload-hidden');
+        if (this.uploadDescriptionInput) {
+            this.uploadDescriptionInput.focus();
+        }
+    }
+
+    closeUploadModal() {
+        if (!this.uploadModal) return;
+        this.uploadModal.classList.add('upload-hidden');
+        if (this.uploadForm) {
+            this.uploadForm.reset();
+        }
+        this.setUploadStatus('', 'info');
+    }
+
+    setUploadStatus(message, level = 'info') {
+        if (!this.uploadStatusElement) return;
+        this.uploadStatusElement.textContent = message;
+        this.uploadStatusElement.dataset.level = level;
+    }
+
+    async handleUploadSubmit() {
+        const file = this.uploadFileInput?.files?.[0];
+        const description = String(this.uploadDescriptionInput?.value || '').trim().slice(0, 500);
+
+        if (!file) {
+            this.setUploadStatus('请先选择一张图片。', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+        formData.append('description', description);
+
+        if (this.uploadSubmitBtn) {
+            this.uploadSubmitBtn.disabled = true;
+            this.uploadSubmitBtn.textContent = '上传中...';
+        }
+        this.setUploadStatus('正在上传，请稍候...', 'info');
+
+        try {
+            const response = await fetch('/api/public-upload', {
+                method: 'POST',
+                body: formData,
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || payload?.success === false) {
+                throw new Error(payload?.message || `上传失败（HTTP ${response.status}）`);
+            }
+
+            const uploadedUrl = payload?.data?.url || '';
+            if (uploadedUrl && this.singleImageElement) {
+                this.singleImageElement.src = uploadedUrl;
+            }
+
+            this.setUploadStatus('上传成功，感谢你的投稿。', 'success');
+            setTimeout(() => {
+                this.closeUploadModal();
+            }, 900);
+        } catch (error) {
+            this.setUploadStatus(`上传失败：${error.message}`, 'error');
+        } finally {
+            if (this.uploadSubmitBtn) {
+                this.uploadSubmitBtn.disabled = false;
+                this.uploadSubmitBtn.textContent = '开始上传';
+            }
+        }
+    }
+
     handleUrlParams() {
         if (!this.tagFilter || typeof this.tagFilter.selectTagByValue !== 'function') {
             return;
@@ -391,6 +587,10 @@ class Gallery {
         }
 
         document.body.classList.remove('single-image-mode');
+        this.closeUploadModal();
+        if (this.fullscreenUploadBtn) {
+            this.fullscreenUploadBtn.classList.add('upload-hidden');
+        }
         if (this.imageLoader) {
             this.imageLoader.setGalleryMarginTop();
             this.imageLoader.updateColumns();

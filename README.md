@@ -16,6 +16,7 @@
 - 瀑布流画廊：懒加载、自动滚动、分类筛选、模态原图查看
 - 展示模式：支持 `fullscreen`（单图沉浸）与 `waterfall`（瀑布流）
 - 随机能力：支持随机排序 + ImgBed `/random` 随机图
+- 全屏投稿：可在全屏模式右下角显示上传按钮，普通访客可投稿到指定目录
 - 管理后台：`/admin` 登录后按域名配置前台行为
 - 配置存储：支持 Cloudflare `D1` 或 `KV`
 
@@ -34,8 +35,10 @@ Gallery-Portfolio/
 ├── functions/
 │   ├── api/public-config.js
 │   ├── api/gallery-data.js
+│   ├── api/public-upload.js
 │   ├── api/admin/login.js
 │   ├── api/admin/config.js
+│   ├── api/admin/directories.js
 │   └── _lib/
 ├── public/
 ├── generate-gallery-index-imgbed.js
@@ -137,12 +140,22 @@ admin / admin
   - 预览目录 `previewDir`
   - 分页大小 `pageSize`
   - 递归子目录 `recursive`
+- 前台上传弹窗参数：
+  - 开关 `publicUpload.enabled`
+  - 按钮文案 `publicUpload.buttonText`
+  - 弹窗标题 `publicUpload.modalTitle`
+  - 说明文案 `publicUpload.description`（管理员自定义，前台显示）
 
 `listDir` 用于按 ImgBed 文件夹筛选展示内容：
 - `waterfall`：仅展示该目录下图片
 - `fullscreen`：随机图接口会附带 `dir` 参数，仅从该目录随机
 - 随机接口失败时，前端回退到图库随机时也只会从已筛选结果中取图
 - 管理后台支持“获取目录”按钮，可分层浏览并一层层选择目录
+
+前台上传说明：
+- 上传按钮仅在 `fullscreen` 模式显示
+- 上传默认写入 `listDir` 指定目录（为空则上传到根目录）
+- `/upload` 调用使用服务端保存的 ImgBed Token，不在前台暴露
 
 ---
 
@@ -181,6 +194,10 @@ DEFAULT_IMGBED_LIST_DIR=
 DEFAULT_IMGBED_PREVIEW_DIR=0_preview
 DEFAULT_IMGBED_RECURSIVE=true
 DEFAULT_IMGBED_PAGE_SIZE=200
+DEFAULT_PUBLIC_UPLOAD_ENABLED=false
+DEFAULT_PUBLIC_UPLOAD_BUTTON_TEXT=上传图片
+DEFAULT_PUBLIC_UPLOAD_MODAL_TITLE=上传图片
+DEFAULT_PUBLIC_UPLOAD_DESCRIPTION=请填写图片描述并选择图片后上传。
 ```
 
 ### 这些变量是否都要填到 Pages？
@@ -218,6 +235,10 @@ DEFAULT_IMGBED_LIST_DIR
 DEFAULT_IMGBED_PREVIEW_DIR
 DEFAULT_IMGBED_RECURSIVE
 DEFAULT_IMGBED_PAGE_SIZE
+DEFAULT_PUBLIC_UPLOAD_ENABLED
+DEFAULT_PUBLIC_UPLOAD_BUTTON_TEXT
+DEFAULT_PUBLIC_UPLOAD_MODAL_TITLE
+DEFAULT_PUBLIC_UPLOAD_DESCRIPTION
 ```
 
 #### C. 通常不需要填 Pages（本地/CI 脚本用）
@@ -266,6 +287,8 @@ IMGBED_PREVIEW_*
   返回当前域名可公开配置（前台读取）
 - `GET /api/gallery-data`  
   动态拉取并返回当前域名图库数据（需在配置里启用 `imgbed-api` 模式）
+- `POST /api/public-upload`  
+  全屏投稿上传接口（需在域名配置中开启 `publicUpload.enabled`）
 
 ### 管理接口（需 Bearer Token）
 

@@ -17,6 +17,10 @@
   display: none;
 }
 
+.upload-hidden {
+  display: none !important;
+}
+
 body.app-booting {
   overflow: hidden !important;
 }
@@ -83,6 +87,213 @@ body.single-image-mode #single-image {
   height: auto;
   object-fit: contain;
   display: block;
+}
+
+.fullscreen-upload-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.76);
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 10px 14px;
+  cursor: pointer;
+  z-index: 5;
+  transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+body.single-image-mode .fullscreen-upload-btn:not(.upload-hidden) {
+  display: inline-flex;
+}
+
+.fullscreen-upload-btn:hover {
+  background: rgba(17, 17, 17, 0.92);
+  border-color: rgba(255, 255, 255, 0.66);
+}
+
+.fullscreen-upload-btn:active {
+  transform: translateY(1px);
+}
+
+.upload-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  font-size: 12px;
+}
+
+.upload-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.62);
+  padding: 20px;
+}
+
+.upload-modal:not(.upload-hidden) {
+  display: flex;
+}
+
+.upload-modal-card {
+  width: min(520px, calc(100vw - 32px));
+  background: #0f1115;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.upload-modal-card h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.upload-modal-description {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.upload-target-dir {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.upload-target-dir code {
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  word-break: break-all;
+}
+
+#upload-form {
+  display: grid;
+  gap: 8px;
+}
+
+#upload-form label {
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+#upload-form textarea,
+#upload-form input[type="file"] {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  color: #f8fafc;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+#upload-form textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+#upload-form textarea:focus-visible,
+#upload-form input[type="file"]:focus-visible,
+.upload-btn-primary:focus-visible,
+.upload-btn-secondary:focus-visible,
+.fullscreen-upload-btn:focus-visible {
+  outline: 2px solid #d4af37;
+  outline-offset: 2px;
+}
+
+.upload-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.upload-btn-primary,
+.upload-btn-secondary {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 16px;
+}
+
+.upload-btn-primary {
+  background: #d4af37;
+  border-color: #d4af37;
+  color: #171717;
+}
+
+.upload-btn-primary:hover {
+  background: #c49f25;
+}
+
+.upload-btn-secondary {
+  background: rgba(15, 23, 42, 0.55);
+  color: #f8fafc;
+}
+
+.upload-btn-secondary:hover {
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.upload-btn-primary:disabled,
+.upload-btn-secondary:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.upload-feedback {
+  min-height: 22px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.upload-feedback[data-level="success"] {
+  color: #86efac;
+}
+
+.upload-feedback[data-level="error"] {
+  color: #fca5a5;
+}
+
+@media (max-width: 600px) {
+  .fullscreen-upload-btn {
+    right: 12px;
+    bottom: 12px;
+    padding: 10px 12px;
+  }
+
+  .upload-modal {
+    padding: 12px;
+  }
+
+  .upload-modal-card {
+    border-radius: 12px;
+    padding: 14px;
+  }
 }
 
 /* Keyframes for image fly-in effect */

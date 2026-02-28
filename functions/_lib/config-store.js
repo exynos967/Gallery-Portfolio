@@ -3,6 +3,11 @@ const initializedD1 = new WeakSet();
 
 const D1_TABLE_NAME = "gallery_admin_config";
 const MAX_IMGBED_PAGE_SIZE = 500;
+const MAX_UPLOAD_TEXT_LENGTH = 500;
+
+const DEFAULT_UPLOAD_MODAL_TITLE = "上传图片";
+const DEFAULT_UPLOAD_BUTTON_TEXT = "上传图片";
+const DEFAULT_UPLOAD_DESCRIPTION = "请填写图片描述并选择图片后上传。";
 
 function parseBoolean(input, fallbackValue) {
   if (input === undefined || input === null || input === "") return fallbackValue;
@@ -64,6 +69,35 @@ function normalizeImgbedConfig(imgbedConfig = {}, fallbackImgbed = {}) {
   };
 }
 
+function normalizeText(input, fallbackValue = "", maxLength = MAX_UPLOAD_TEXT_LENGTH) {
+  const text = String(input ?? "").trim();
+  const fallback = String(fallbackValue ?? "").trim();
+  const value = text || fallback;
+  if (!value) return "";
+  return value.slice(0, maxLength);
+}
+
+function normalizePublicUploadConfig(publicUploadConfig = {}, fallbackPublicUpload = {}) {
+  return {
+    enabled: parseBoolean(publicUploadConfig.enabled, parseBoolean(fallbackPublicUpload.enabled, false)),
+    modalTitle: normalizeText(
+      publicUploadConfig.modalTitle,
+      fallbackPublicUpload.modalTitle || DEFAULT_UPLOAD_MODAL_TITLE,
+      80
+    ),
+    buttonText: normalizeText(
+      publicUploadConfig.buttonText,
+      fallbackPublicUpload.buttonText || DEFAULT_UPLOAD_BUTTON_TEXT,
+      24
+    ),
+    description: normalizeText(
+      publicUploadConfig.description,
+      fallbackPublicUpload.description || DEFAULT_UPLOAD_DESCRIPTION,
+      MAX_UPLOAD_TEXT_LENGTH
+    ),
+  };
+}
+
 function toStoredConfig(domain, config, nowIso) {
   return {
     domain,
@@ -72,6 +106,7 @@ function toStoredConfig(domain, config, nowIso) {
     galleryDataMode: String(config.galleryDataMode || "static").toLowerCase() === "imgbed-api" ? "imgbed-api" : "static",
     galleryIndexUrl: String(config.galleryIndexUrl || "").trim(),
     imgbed: normalizeImgbedConfig(config.imgbed),
+    publicUpload: normalizePublicUploadConfig(config.publicUpload),
     updatedAt: nowIso,
   };
 }
@@ -96,6 +131,20 @@ function makeDefaultConfig(env) {
         pageSize: env.DEFAULT_IMGBED_PAGE_SIZE,
       },
       {}
+    ),
+    publicUpload: normalizePublicUploadConfig(
+      {
+        enabled: env.DEFAULT_PUBLIC_UPLOAD_ENABLED,
+        modalTitle: env.DEFAULT_PUBLIC_UPLOAD_MODAL_TITLE,
+        buttonText: env.DEFAULT_PUBLIC_UPLOAD_BUTTON_TEXT,
+        description: env.DEFAULT_PUBLIC_UPLOAD_DESCRIPTION,
+      },
+      {
+        enabled: false,
+        modalTitle: DEFAULT_UPLOAD_MODAL_TITLE,
+        buttonText: DEFAULT_UPLOAD_BUTTON_TEXT,
+        description: DEFAULT_UPLOAD_DESCRIPTION,
+      }
     ),
   };
 }
@@ -167,6 +216,7 @@ export async function getDomainConfig(env, domain) {
     ...defaults,
     ...(stored || {}),
     imgbed: normalizeImgbedConfig(stored?.imgbed, defaults.imgbed),
+    publicUpload: normalizePublicUploadConfig(stored?.publicUpload, defaults.publicUpload),
   };
 
   return {
@@ -222,5 +272,11 @@ export function toPublicConfig(config = {}) {
       recursive: parseBoolean(config.imgbed?.recursive, true),
       pageSize: toPositiveInt(config.imgbed?.pageSize, 200, MAX_IMGBED_PAGE_SIZE),
     },
+    publicUpload: normalizePublicUploadConfig(config.publicUpload, {
+      enabled: false,
+      modalTitle: DEFAULT_UPLOAD_MODAL_TITLE,
+      buttonText: DEFAULT_UPLOAD_BUTTON_TEXT,
+      description: DEFAULT_UPLOAD_DESCRIPTION,
+    }),
   };
 }

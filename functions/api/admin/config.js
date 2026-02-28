@@ -9,6 +9,9 @@ function sanitizeInputConfig(config) {
     String(config?.galleryDataMode || "").toLowerCase() === "imgbed-api" ? "imgbed-api" : "static";
   const galleryIndexUrl = String(config?.galleryIndexUrl || "").trim();
   const pageSize = Number(config?.imgbed?.pageSize);
+  const publicUploadDescription = String(config?.publicUpload?.description || "").trim();
+  const publicUploadModalTitle = String(config?.publicUpload?.modalTitle || "").trim();
+  const publicUploadButtonText = String(config?.publicUpload?.buttonText || "").trim();
 
   return {
     displayMode,
@@ -25,6 +28,12 @@ function sanitizeInputConfig(config) {
       previewDir: String(config?.imgbed?.previewDir || "0_preview").trim() || "0_preview",
       recursive: config?.imgbed?.recursive === undefined ? true : Boolean(config.imgbed.recursive),
       pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.min(Math.floor(pageSize), 500) : 200,
+    },
+    publicUpload: {
+      enabled: config?.publicUpload?.enabled === undefined ? false : Boolean(config.publicUpload.enabled),
+      modalTitle: publicUploadModalTitle.slice(0, 80),
+      buttonText: publicUploadButtonText.slice(0, 24),
+      description: publicUploadDescription.slice(0, 500),
     },
   };
 }

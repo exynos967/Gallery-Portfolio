@@ -31,8 +31,8 @@
         display: none !important;
       }
     </style>
-    <link rel="stylesheet" href="public/styles.css?v=20260228-4" />
-    <link rel="stylesheet" href="public/gallery.css?v=20260228-4" />
+    <link rel="stylesheet" href="public/styles.css?v=20260228-5" />
+    <link rel="stylesheet" href="public/gallery.css?v=20260228-5" />
     <link rel="icon" href="public/assets/favicon.svg" type="image/svg+xml" />
   </head>
   <body class="app-booting">
@@ -75,6 +75,46 @@
     <div id="single-image-stage" class="single-image-stage">
       <img id="single-image" alt="Gallery Image" />
     </div>
+    <button
+      id="fullscreen-upload-btn"
+      class="fullscreen-upload-btn upload-hidden"
+      type="button"
+      aria-label="上传图片"
+    >
+      <span class="upload-btn-icon" aria-hidden="true">+</span>
+      <span id="fullscreen-upload-btn-text">上传图片</span>
+    </button>
+
+    <div id="upload-modal" class="upload-modal upload-hidden" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+      <div class="upload-modal-card">
+        <h2 id="upload-modal-title">上传图片</h2>
+        <p id="upload-modal-description" class="upload-modal-description">
+          请填写图片描述并选择图片后上传。
+        </p>
+        <p class="upload-target-dir">目标目录：<code id="upload-folder-label">/</code></p>
+
+        <form id="upload-form" novalidate>
+          <label for="upload-user-description">图片描述</label>
+          <textarea
+            id="upload-user-description"
+            name="description"
+            rows="3"
+            maxlength="500"
+            placeholder="可填写图片说明"
+          ></textarea>
+
+          <label for="upload-file-input">选择图片文件</label>
+          <input id="upload-file-input" name="file" type="file" accept="image/*" required />
+
+          <div class="upload-modal-actions">
+            <button id="upload-cancel-btn" class="upload-btn-secondary" type="button">取消</button>
+            <button id="upload-submit-btn" class="upload-btn-primary" type="submit">开始上传</button>
+          </div>
+
+          <p id="upload-feedback" class="upload-feedback" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
     <div class="gallery" id="gallery"></div>
 
     <!-- Modal for image display -->
@@ -86,11 +126,11 @@
     </div>
 
     <!-- 加载JavaScript模块 -->
-    <script src="public/data-loader.js?v=20260228-4"></script>
-    <script src="public/tag-filter.js?v=20260228-4"></script>
-    <script src="public/image-loader.js?v=20260228-4"></script>
-    <script src="public/auto-scroll.js?v=20260228-4"></script>
-    <script src="public/layout.js?v=20260228-4"></script>
-    <script src="public/gallery.js?v=20260228-4"></script>
+    <script src="public/data-loader.js?v=20260228-5"></script>
+    <script src="public/tag-filter.js?v=20260228-5"></script>
+    <script src="public/image-loader.js?v=20260228-5"></script>
+    <script src="public/auto-scroll.js?v=20260228-5"></script>
+    <script src="public/layout.js?v=20260228-5"></script>
+    <script src="public/gallery.js?v=20260228-5"></script>
   </body>
 </html> 

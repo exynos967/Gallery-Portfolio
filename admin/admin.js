@@ -41,6 +41,10 @@
   const imgbedPreviewDirInput = document.getElementById("imgbed-preview-dir");
   const imgbedPageSizeInput = document.getElementById("imgbed-page-size");
   const imgbedRecursiveInput = document.getElementById("imgbed-recursive");
+  const publicUploadEnabledInput = document.getElementById("public-upload-enabled");
+  const publicUploadButtonTextInput = document.getElementById("public-upload-button-text");
+  const publicUploadModalTitleInput = document.getElementById("public-upload-modal-title");
+  const publicUploadDescriptionInput = document.getElementById("public-upload-description");
   const fetchDirsBtn = document.getElementById("fetch-dirs-btn");
   const dirPicker = document.getElementById("dir-picker");
   const dirRootBtn = document.getElementById("dir-root-btn");
@@ -309,6 +313,12 @@
         recursive: Boolean(imgbedRecursiveInput.checked),
         pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.min(Math.floor(pageSize), 500) : 200,
       },
+      publicUpload: {
+        enabled: Boolean(publicUploadEnabledInput.checked),
+        buttonText: publicUploadButtonTextInput.value.trim(),
+        modalTitle: publicUploadModalTitleInput.value.trim(),
+        description: publicUploadDescriptionInput.value.trim(),
+      },
     };
   }
 
@@ -327,6 +337,11 @@
     imgbedPreviewDirInput.value = safe.imgbed?.previewDir || "0_preview";
     imgbedPageSizeInput.value = String(safe.imgbed?.pageSize || 200);
     imgbedRecursiveInput.checked = safe.imgbed?.recursive !== false;
+    publicUploadEnabledInput.checked = safe.publicUpload?.enabled === true;
+    publicUploadButtonTextInput.value = safe.publicUpload?.buttonText || "上传图片";
+    publicUploadModalTitleInput.value = safe.publicUpload?.modalTitle || "上传图片";
+    publicUploadDescriptionInput.value =
+      safe.publicUpload?.description || "请填写图片描述并选择图片后上传。";
 
     if (directoryTree) {
       currentDirectoryPath = normalizeDirPath(safe.imgbed?.listDir || "");
@@ -356,6 +371,12 @@
         previewDir: "0_preview",
         recursive: true,
         pageSize: 200,
+      },
+      publicUpload: {
+        enabled: false,
+        buttonText: "上传图片",
+        modalTitle: "上传图片",
+        description: "请填写图片描述并选择图片后上传。",
       },
     });
     setStatus("已重置为默认配置。");
