@@ -591,10 +591,6 @@ class ImageLoader {
 
     // 设置gallery的margin-top
     setGalleryMarginTop() {
-        if (document.body.classList.contains('fullscreen-mode')) {
-            this.galleryElement.style.marginTop = '10px';
-            return;
-        }
         const headerHeight = document.querySelector('header').offsetHeight;
         this.galleryElement.style.marginTop = `${headerHeight + 20}px`;
     }

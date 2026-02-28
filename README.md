@@ -14,7 +14,7 @@
 - ImgBed 接入：通过 `generate-gallery-index-imgbed.js` 生成 `gallery-index.json`
 - 动态图库模式：可由 `/admin` 配置后端拉取 ImgBed 列表（无需本地 `.env` 生成索引）
 - 瀑布流画廊：懒加载、自动滚动、分类筛选、模态原图查看
-- 展示模式：支持 `fullscreen`（全屏）与 `waterfall`（瀑布流）
+- 展示模式：支持 `fullscreen`（单图沉浸）与 `waterfall`（瀑布流）
 - 随机能力：支持随机排序 + ImgBed `/random` 随机图
 - 管理后台：`/admin` 登录后按域名配置前台行为
 - 配置存储：支持 Cloudflare `D1` 或 `KV`
@@ -72,7 +72,8 @@ ADMIN_SESSION_SECRET=change-this-secret
 
 1. 把“图库数据源”切为 `ImgBed API 动态拉取`
 2. 填写 ImgBed 基础域名与 `API Token`
-3. 保存后前台即按该域名动态加载图片
+3. 选择展示模式：`fullscreen`（黑底单图）或 `waterfall`（瀑布流）
+4. 保存后前台即按该域名动态加载图片
 
 ### 4) 本地预览（可选）
 
@@ -121,7 +122,9 @@ admin / admin
 ### 管理后台可配置项
 
 - 图库数据源：`static` / `imgbed-api`
-- 访问模式：`fullscreen` / `waterfall`
+- 访问模式：
+  - `fullscreen`：仅显示一张自适应图片，黑色背景，隐藏 header/footer/admin 等所有页面控件
+  - `waterfall`：多图瀑布流展示，保留筛选与交互按钮
 - 默认随机排序：开/关
 - `gallery-index.json` 自定义地址
 - ImgBed API 参数：
@@ -233,9 +236,13 @@ IMGBED_PREVIEW_*
 按“当前访问域名”读取配置并应用。优先级：
 
 1. URL 参数（`?fullscreen=0` / `?shuffle=0`）
-2. 本地 `localStorage`
-3. 远端域名配置（`/api/public-config`）
-4. 默认值
+2. 远端域名配置（`/api/public-config`）
+3. 默认值
+
+说明：
+
+- `fullscreen`：不使用本地缓存，默认跟随域名配置（除非 URL 参数覆盖）
+- `shuffle`：会记忆本地开关状态（`localStorage`）
 
 当 `galleryDataMode=imgbed-api` 时，前台会请求：
 

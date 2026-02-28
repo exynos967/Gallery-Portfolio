@@ -214,11 +214,6 @@ body.dark #exif-info {
   color: #e0e0e0;
 }
 
-/* 全屏模式（全宽展示） */
-body.fullscreen-mode footer {
-  display: none;
-}
-
 /* 加载原图按钮样式 */
 .load-original-btn {
   position: fixed;

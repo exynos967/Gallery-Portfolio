@@ -7,134 +7,216 @@ class Gallery {
         };
         this.remoteConfig = null;
         this.dataLoader = new DataLoader();
-        this.autoScroll = new AutoScroll();
+        this.autoScroll = null;
         this.tagFilter = null;
         this.imageLoader = null;
         this.isPageLoading = true;
-        this.lastWidth = window.innerWidth;
         this.isRandomImageLoading = false;
+        this.singleImageMode = false;
+
         this.fullscreenToggleBtn = null;
         this.shuffleToggleBtn = null;
         this.randomImageBtn = null;
+
+        this.singleImageStage = document.getElementById('single-image-stage');
+        this.singleImageElement = document.getElementById('single-image');
+        this.loadingElement = document.getElementById('loading');
 
         this.init();
     }
 
     async init() {
-        // 等待页面加载完成
         window.addEventListener('load', () => {
             this.isPageLoading = false;
         });
 
-        // 监听浏览器前进后退按钮
         window.addEventListener('popstate', () => {
-            // 确保 tagFilter 初始化后再处理 URL
+            if (this.singleImageMode) return;
             setTimeout(() => this.handleUrlParams(), 0);
         });
 
-        // 加载远端配置（若可用）
         this.remoteConfig = await this.fetchRemoteConfig();
         this.applyRemoteConfigToDataLoader(this.remoteConfig);
         this.settings = this.getInitialSettings(this.remoteConfig);
         this.dataLoader.setShuffleEnabled(this.settings.shuffle);
 
-        // 加载图片数据
         await this.dataLoader.loadGalleryData();
 
-        // 初始化组件（包括 tagFilter）
+        if (this.settings.fullscreen) {
+            this.singleImageMode = true;
+            await this.initSingleImageMode();
+            return;
+        }
+
+        this.autoScroll = new AutoScroll();
         this.initComponents();
-
-        // 应用显示设置（全屏 / 随机排序）
-        this.applyFullscreenMode(this.settings.fullscreen, false);
-        this.dataLoader.setShuffleEnabled(this.settings.shuffle);
-
-        // 初始化功能按钮
+        this.applyFullscreenMode(false);
         this.setupActionButtons();
-
-        // 设置自动滚动按钮显示逻辑
         this.autoScroll.setupScrollButtonVisibility();
-
-        // 处理 URL 参数（此时 tagFilter 已准备好）
         this.handleUrlParams();
-
-        // 初始加载
         this.loadInitialImages();
     }
 
     initComponents() {
         const galleryElement = document.getElementById('gallery');
 
-        // 初始化图片加载器
         this.imageLoader = new ImageLoader(galleryElement, this.dataLoader);
 
-        // 初始化标签筛选器
         this.tagFilter = new TagFilter((tag) => {
             this.imageLoader.filterImages(tag);
             this.updateUrlForTag(tag);
         });
 
-        // 创建标签筛选器
         const categories = this.dataLoader.getCategories();
         this.tagFilter.createTagFilter(categories);
 
-        // 设置模态窗口事件
         this.imageLoader.setupModalEvents();
-
-        // 设置gallery的margin-top
         this.imageLoader.setGalleryMarginTop();
     }
 
-    // 处理URL参数
+    async initSingleImageMode() {
+        document.body.classList.add('single-image-mode');
+        const stage = this.ensureSingleImageStage();
+        const imageData = await this.getSingleImageData();
+
+        if (!imageData) {
+            stage.classList.add('empty');
+            stage.textContent = 'No image';
+            this.hideLoading();
+            return;
+        }
+
+        const primaryUrl = imageData.original || imageData.preview;
+        const fallbackUrl = imageData.preview && imageData.preview !== primaryUrl ? imageData.preview : '';
+
+        try {
+            await this.loadImageToElement(this.singleImageElement, primaryUrl);
+        } catch (error) {
+            if (!fallbackUrl) {
+                console.error('全屏单图加载失败:', error);
+                stage.classList.add('empty');
+                stage.textContent = 'Image load failed';
+                this.hideLoading();
+                return;
+            }
+
+            try {
+                await this.loadImageToElement(this.singleImageElement, fallbackUrl);
+            } catch (fallbackError) {
+                console.error('全屏单图加载失败（含回退）:', fallbackError);
+                stage.classList.add('empty');
+                stage.textContent = 'Image load failed';
+                this.hideLoading();
+                return;
+            }
+        }
+
+        stage.classList.remove('empty');
+        this.hideLoading();
+    }
+
+    ensureSingleImageStage() {
+        if (this.singleImageStage && this.singleImageElement) {
+            return this.singleImageStage;
+        }
+
+        const stage = document.createElement('div');
+        stage.id = 'single-image-stage';
+        stage.className = 'single-image-stage';
+
+        const image = document.createElement('img');
+        image.id = 'single-image';
+        image.alt = 'Gallery Image';
+
+        stage.appendChild(image);
+        document.body.appendChild(stage);
+
+        this.singleImageStage = stage;
+        this.singleImageElement = image;
+        return stage;
+    }
+
+    async getSingleImageData() {
+        if (this.dataLoader.hasRandomApi()) {
+            try {
+                return await this.dataLoader.fetchRandomImage({
+                    orientation: 'auto',
+                });
+            } catch (error) {
+                console.warn('随机图接口失败，回退本地数据:', error);
+            }
+        }
+
+        const allImages = this.dataLoader.getAllImages();
+        if (!allImages.length) return null;
+
+        if (this.settings.shuffle) {
+            const index = Math.floor(Math.random() * allImages.length);
+            return allImages[index];
+        }
+
+        return allImages[0];
+    }
+
+    loadImageToElement(imageElement, imageUrl) {
+        return new Promise((resolve, reject) => {
+            if (!imageUrl) {
+                reject(new Error('image url is empty'));
+                return;
+            }
+
+            const loader = new Image();
+            loader.onload = () => {
+                imageElement.src = imageUrl;
+                resolve();
+            };
+            loader.onerror = () => {
+                reject(new Error(`failed to load image: ${imageUrl}`));
+            };
+            loader.src = imageUrl;
+        });
+    }
+
+    hideLoading() {
+        if (this.loadingElement) {
+            this.loadingElement.classList.add('hidden');
+        }
+    }
+
     handleUrlParams() {
         if (!this.tagFilter || typeof this.tagFilter.selectTagByValue !== 'function') {
-            console.warn('tagFilter 尚未初始化，跳过 handleUrlParams');
             return;
         }
 
         const path = window.location.pathname;
-        const tagFromUrl = path.substring(1); // 移除开头的斜杠
-
-        console.log('处理URL参数:', { path, tagFromUrl });
+        const tagFromUrl = path.substring(1);
 
         if (tagFromUrl && tagFromUrl !== '') {
             const categories = this.dataLoader.getCategories();
-            console.log('可用标签:', categories);
-
             if (categories.includes(tagFromUrl)) {
-                console.log('找到匹配的标签:', tagFromUrl);
                 this.tagFilter.selectTagByValue(tagFromUrl);
                 this.imageLoader.filterImages(tagFromUrl);
-            } else {
-                console.log('标签不存在:', tagFromUrl);
-                if (this.tagFilter.getCurrentTag() !== 'all') {
-                    this.tagFilter.selectTagByValue('all');
-                    this.imageLoader.filterImages('all');
-                }
-            }
-        } else {
-            console.log('URL中没有标签参数，选择All标签');
-            if (this.tagFilter.getCurrentTag() !== 'all') {
+            } else if (this.tagFilter.getCurrentTag() !== 'all') {
                 this.tagFilter.selectTagByValue('all');
                 this.imageLoader.filterImages('all');
             }
+        } else if (this.tagFilter.getCurrentTag() !== 'all') {
+            this.tagFilter.selectTagByValue('all');
+            this.imageLoader.filterImages('all');
         }
     }
 
-    // 更新URL
     updateUrlForTag(tag) {
-        console.log('更新URL为标签:', tag);
         const searchAndHash = `${window.location.search}${window.location.hash}`;
 
         if (tag === 'all') {
             const targetUrl = `/${searchAndHash}`;
             if (`${window.location.pathname}${searchAndHash}` !== targetUrl) {
-                console.log('移除URL中的标签参数');
                 window.history.pushState({}, '', targetUrl);
             }
         } else {
             const newUrl = `/${tag}${searchAndHash}`;
             if (`${window.location.pathname}${searchAndHash}` !== newUrl) {
-                console.log('更新URL为:', newUrl);
                 window.history.pushState({}, '', newUrl);
             }
         }
@@ -147,20 +229,20 @@ class Gallery {
         this.imageLoader.updateColumns();
 
         setTimeout(() => {
-        this.imageLoader.checkIfMoreImagesNeeded();
+            this.imageLoader.checkIfMoreImagesNeeded();
         }, 500);
     }
 
     getInitialSettings(remoteConfig = null) {
         const params = new URLSearchParams(window.location.search);
-        const storedFullscreen = localStorage.getItem('gallery-fullscreen-mode');
         const storedShuffle = localStorage.getItem('gallery-shuffle-mode');
         const displayMode = String(remoteConfig?.displayMode || '').toLowerCase();
         const defaultFullscreen = displayMode === 'waterfall' ? false : true;
         const defaultShuffle = remoteConfig?.shuffleEnabled ?? true;
+        const fullscreenFromQuery = this.parseBooleanOption(params.get('fullscreen'), null, null);
 
         return {
-            fullscreen: this.parseBooleanOption(params.get('fullscreen'), storedFullscreen, defaultFullscreen),
+            fullscreen: fullscreenFromQuery === null ? defaultFullscreen : fullscreenFromQuery,
             shuffle: this.parseBooleanOption(params.get('shuffle'), storedShuffle, defaultShuffle),
         };
     }
@@ -184,13 +266,15 @@ class Gallery {
     }
 
     setupActionButtons() {
+        if (this.singleImageMode) return;
+
         this.fullscreenToggleBtn = document.getElementById('fullscreen-toggle');
         this.shuffleToggleBtn = document.getElementById('shuffle-toggle');
         this.randomImageBtn = document.getElementById('random-image-btn');
 
         if (this.fullscreenToggleBtn) {
             this.fullscreenToggleBtn.addEventListener('click', () => {
-                this.applyFullscreenMode(!this.settings.fullscreen, true);
+                this.applyFullscreenMode(true);
             });
         }
 
@@ -214,13 +298,12 @@ class Gallery {
     }
 
     updateActionButtons() {
+        if (this.singleImageMode) return;
+
         if (this.fullscreenToggleBtn) {
-            this.fullscreenToggleBtn.classList.toggle('active', this.settings.fullscreen);
-            this.fullscreenToggleBtn.setAttribute(
-                'aria-label',
-                this.settings.fullscreen ? '退出全屏模式' : '开启全屏模式'
-            );
-            this.fullscreenToggleBtn.textContent = this.settings.fullscreen ? '🗗' : '⛶';
+            this.fullscreenToggleBtn.classList.toggle('active', false);
+            this.fullscreenToggleBtn.setAttribute('aria-label', '开启全屏模式');
+            this.fullscreenToggleBtn.textContent = '⛶';
         }
 
         if (this.shuffleToggleBtn) {
@@ -232,14 +315,18 @@ class Gallery {
         }
     }
 
-    applyFullscreenMode(enabled, persist = true) {
-        this.settings.fullscreen = Boolean(enabled);
-        document.body.classList.toggle('fullscreen-mode', this.settings.fullscreen);
+    applyFullscreenMode(enabled) {
+        const fullscreen = Boolean(enabled);
+        this.settings.fullscreen = fullscreen;
 
-        if (persist) {
-            localStorage.setItem('gallery-fullscreen-mode', String(this.settings.fullscreen));
+        if (fullscreen) {
+            const nextUrl = new URL(window.location.href);
+            nextUrl.searchParams.set('fullscreen', '1');
+            window.location.href = nextUrl.toString();
+            return;
         }
 
+        document.body.classList.remove('single-image-mode');
         if (this.imageLoader) {
             this.imageLoader.setGalleryMarginTop();
             this.imageLoader.updateColumns();
@@ -249,6 +336,8 @@ class Gallery {
     }
 
     toggleShuffleMode() {
+        if (this.singleImageMode) return;
+
         this.settings.shuffle = !this.settings.shuffle;
         this.dataLoader.setShuffleEnabled(this.settings.shuffle);
         localStorage.setItem('gallery-shuffle-mode', String(this.settings.shuffle));
@@ -262,9 +351,8 @@ class Gallery {
     }
 
     async openRandomImage() {
-        if (!this.imageLoader || this.isRandomImageLoading) {
-            return;
-        }
+        if (this.singleImageMode) return;
+        if (!this.imageLoader || this.isRandomImageLoading) return;
 
         this.isRandomImageLoading = true;
 
