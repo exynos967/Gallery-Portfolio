@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gallery Admin</title>
-    <link rel="stylesheet" href="admin.css?v=20260228-1" />
+    <link rel="stylesheet" href="admin.css?v=20260228-2" />
   </head>
   <body>
     <main class="admin-shell">
@@ -107,9 +107,28 @@
               <input id="imgbed-file-prefix" name="imgbed-file-prefix" type="text" placeholder="/file" />
             </div>
 
-            <div class="field">
-              <label for="imgbed-list-dir">列表目录（可选）</label>
-              <input id="imgbed-list-dir" name="imgbed-list-dir" type="text" placeholder="例如：gallery/photos" />
+            <div class="field full-width">
+              <label for="imgbed-list-dir">显示目录（可选）</label>
+              <div class="dir-input-row">
+                <input
+                  id="imgbed-list-dir"
+                  name="imgbed-list-dir"
+                  type="text"
+                  placeholder="例如：gallery/photos（用于筛选瀑布流与全屏随机图）"
+                />
+                <button id="fetch-dirs-btn" class="secondary-btn" type="button">获取目录</button>
+              </div>
+
+              <section id="dir-picker" class="dir-picker hidden" aria-live="polite">
+                <div class="dir-toolbar">
+                  <button id="dir-root-btn" class="secondary-btn" type="button">根目录</button>
+                  <button id="dir-up-btn" class="secondary-btn" type="button">上一级</button>
+                  <button id="dir-select-btn" class="secondary-btn" type="button">使用当前目录</button>
+                </div>
+                <p id="dir-current-path" class="dir-current-path">当前目录：/</p>
+                <div id="dir-breadcrumb" class="dir-breadcrumb"></div>
+                <div id="dir-children" class="dir-children"></div>
+              </section>
             </div>
 
             <div class="field">
@@ -140,6 +159,6 @@
       </section>
     </main>
 
-    <script src="admin.js?v=20260228-1"></script>
+    <script src="admin.js?v=20260228-2"></script>
   </body>
 </html>

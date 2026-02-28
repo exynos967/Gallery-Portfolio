@@ -476,17 +476,23 @@ class Gallery {
         }
 
         const imgbedConfig = remoteConfig.imgbed || {};
-        const runtimeSource = {
-            type: 'imgbed',
-            base_url: imgbedConfig.baseUrl || imgbedConfig.base_url || '',
-            random_endpoint: imgbedConfig.randomEndpoint || imgbedConfig.random_endpoint || '',
-            list_endpoint: imgbedConfig.listEndpoint || imgbedConfig.list_endpoint || '',
-            file_route_prefix: imgbedConfig.fileRoutePrefix || imgbedConfig.file_route_prefix || '/file',
-        };
+        const runtimeSource = { type: 'imgbed' };
 
-        const hasImgBedOverride = Boolean(
-            runtimeSource.base_url || runtimeSource.random_endpoint || runtimeSource.list_endpoint
-        );
+        const baseUrl = String(imgbedConfig.baseUrl || imgbedConfig.base_url || '').trim();
+        const randomEndpoint = String(imgbedConfig.randomEndpoint || imgbedConfig.random_endpoint || '').trim();
+        const listEndpoint = String(imgbedConfig.listEndpoint || imgbedConfig.list_endpoint || '').trim();
+        const fileRoutePrefix = String(imgbedConfig.fileRoutePrefix || imgbedConfig.file_route_prefix || '').trim();
+        const listDir = String(imgbedConfig.listDir || imgbedConfig.list_dir || '').trim();
+        const previewDir = String(imgbedConfig.previewDir || imgbedConfig.preview_dir || '').trim();
+
+        if (baseUrl) runtimeSource.base_url = baseUrl;
+        if (randomEndpoint) runtimeSource.random_endpoint = randomEndpoint;
+        if (listEndpoint) runtimeSource.list_endpoint = listEndpoint;
+        if (fileRoutePrefix) runtimeSource.file_route_prefix = fileRoutePrefix;
+        if (listDir) runtimeSource.list_dir = listDir;
+        if (previewDir) runtimeSource.preview_dir = previewDir;
+
+        const hasImgBedOverride = Object.keys(runtimeSource).length > 1;
 
         if (hasImgBedOverride) {
             this.dataLoader.setRuntimeSourceConfig(runtimeSource);

@@ -2,11 +2,14 @@
   const API = {
     login: "/api/admin/login",
     config: "/api/admin/config",
+    directories: "/api/admin/directories",
   };
 
   const TOKEN_KEY = "gallery_admin_token";
   let token = localStorage.getItem(TOKEN_KEY) || "";
   let latestConfig = null;
+  let directoryTree = null;
+  let currentDirectoryPath = "";
 
   const loginPanel = document.getElementById("login-panel");
   const dashboardPanel = document.getElementById("dashboard-panel");
@@ -38,6 +41,14 @@
   const imgbedPreviewDirInput = document.getElementById("imgbed-preview-dir");
   const imgbedPageSizeInput = document.getElementById("imgbed-page-size");
   const imgbedRecursiveInput = document.getElementById("imgbed-recursive");
+  const fetchDirsBtn = document.getElementById("fetch-dirs-btn");
+  const dirPicker = document.getElementById("dir-picker");
+  const dirRootBtn = document.getElementById("dir-root-btn");
+  const dirUpBtn = document.getElementById("dir-up-btn");
+  const dirSelectBtn = document.getElementById("dir-select-btn");
+  const dirCurrentPathText = document.getElementById("dir-current-path");
+  const dirBreadcrumb = document.getElementById("dir-breadcrumb");
+  const dirChildren = document.getElementById("dir-children");
 
   function setStatus(message, level = "info") {
     statusText.textContent = message;
@@ -59,6 +70,12 @@
       .replace(/\/.*$/, "")
       .replace(/:\d+$/, "")
       .toLowerCase();
+  }
+
+  function normalizeDirPath(input) {
+    return String(input || "")
+      .trim()
+      .replace(/^\/+|\/+$/g, "");
   }
 
   async function requestApi(url, options = {}, requiresAuth = false) {
@@ -86,6 +103,180 @@
     }
 
     return payload;
+  }
+
+  function clearDirectoryPicker() {
+    directoryTree = null;
+    currentDirectoryPath = "";
+
+    if (dirPicker) {
+      dirPicker.classList.add("hidden");
+    }
+    if (dirCurrentPathText) {
+      dirCurrentPathText.textContent = "当前目录：/";
+    }
+    if (dirBreadcrumb) {
+      dirBreadcrumb.innerHTML = "";
+    }
+    if (dirChildren) {
+      dirChildren.innerHTML = "";
+    }
+  }
+
+  function findDirectoryNode(path) {
+    if (!directoryTree) return null;
+    const normalized = normalizeDirPath(path);
+    if (!normalized) return directoryTree;
+
+    const parts = normalized.split("/").filter(Boolean);
+    let node = directoryTree;
+
+    for (const part of parts) {
+      const children = Array.isArray(node.children) ? node.children : [];
+      const next = children.find((item) => item.name === part);
+      if (!next) return null;
+      node = next;
+    }
+
+    return node;
+  }
+
+  function renderDirectoryBreadcrumb(path) {
+    if (!dirBreadcrumb) return;
+    dirBreadcrumb.innerHTML = "";
+
+    const rootBtn = document.createElement("button");
+    rootBtn.type = "button";
+    rootBtn.className = "secondary-btn";
+    rootBtn.textContent = "/";
+    rootBtn.addEventListener("click", () => {
+      currentDirectoryPath = "";
+      renderDirectoryPicker();
+    });
+    dirBreadcrumb.appendChild(rootBtn);
+
+    const segments = normalizeDirPath(path).split("/").filter(Boolean);
+    let cursor = "";
+
+    segments.forEach((segment) => {
+      cursor = cursor ? `${cursor}/${segment}` : segment;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary-btn";
+      button.textContent = segment;
+      const targetPath = cursor;
+      button.addEventListener("click", () => {
+        currentDirectoryPath = targetPath;
+        renderDirectoryPicker();
+      });
+      dirBreadcrumb.appendChild(button);
+    });
+  }
+
+  function renderDirectoryPicker() {
+    if (!dirPicker || !dirCurrentPathText || !dirChildren) return;
+    if (!directoryTree) {
+      clearDirectoryPicker();
+      return;
+    }
+
+    dirPicker.classList.remove("hidden");
+
+    let normalizedPath = normalizeDirPath(currentDirectoryPath);
+    let node = findDirectoryNode(normalizedPath);
+    if (!node) {
+      normalizedPath = "";
+      node = directoryTree;
+      currentDirectoryPath = "";
+    }
+
+    const pathLabel = normalizedPath ? `/${normalizedPath}` : "/";
+    dirCurrentPathText.textContent = `当前目录：${pathLabel}`;
+    renderDirectoryBreadcrumb(normalizedPath);
+
+    dirChildren.innerHTML = "";
+    const children = Array.isArray(node.children) ? node.children : [];
+
+    if (!children.length) {
+      const empty = document.createElement("p");
+      empty.className = "dir-empty";
+      empty.textContent = "当前层没有子目录，可直接使用当前目录。";
+      dirChildren.appendChild(empty);
+      return;
+    }
+
+    children.forEach((child) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dir-node-btn";
+      button.textContent = child.name;
+      button.addEventListener("click", () => {
+        currentDirectoryPath = child.path;
+        renderDirectoryPicker();
+      });
+      dirChildren.appendChild(button);
+    });
+  }
+
+  function selectCurrentDirectoryPath() {
+    const normalizedPath = normalizeDirPath(currentDirectoryPath);
+    imgbedListDirInput.value = normalizedPath;
+    const label = normalizedPath ? `/${normalizedPath}` : "/";
+    setStatus(`已选择目录：${label}`, "success");
+  }
+
+  function goToDirectoryParent() {
+    const parts = normalizeDirPath(currentDirectoryPath).split("/").filter(Boolean);
+    parts.pop();
+    currentDirectoryPath = parts.join("/");
+    renderDirectoryPicker();
+  }
+
+  async function fetchDirectories() {
+    const domain = normalizeDomain(domainInput.value) || window.location.host;
+    domainInput.value = domain;
+
+    const config = collectConfigFromForm();
+    const baseUrl = String(config?.imgbed?.baseUrl || "").trim();
+    if (!baseUrl) {
+      setStatus("请先填写 ImgBed 基础地址。", "error");
+      imgbedBaseUrlInput.focus();
+      return;
+    }
+
+    setButtonLoading(fetchDirsBtn, true, "获取中...", "获取目录");
+    setStatus("正在获取目录列表...");
+
+    try {
+      const payload = await requestApi(
+        API.directories,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            domain,
+            imgbed: config.imgbed,
+          }),
+        },
+        true
+      );
+
+      directoryTree = payload?.data?.tree || { name: "", path: "", children: [] };
+      currentDirectoryPath = normalizeDirPath(imgbedListDirInput.value || payload?.data?.sourceListDir || "");
+      renderDirectoryPicker();
+      setStatus(`目录获取成功，共 ${Number(payload?.data?.directoryCount || 0)} 个目录。`, "success");
+    } catch (error) {
+      if (error.status === 401) {
+        token = "";
+        localStorage.removeItem(TOKEN_KEY);
+        showLoginPanel();
+        setStatus("登录已过期，请重新登录。", "error");
+        return;
+      }
+      setStatus(`获取目录失败：${error.message}`, "error");
+    } finally {
+      setButtonLoading(fetchDirsBtn, false, "获取中...", "获取目录");
+    }
   }
 
   function showLoginPanel() {
@@ -136,6 +327,11 @@
     imgbedPreviewDirInput.value = safe.imgbed?.previewDir || "0_preview";
     imgbedPageSizeInput.value = String(safe.imgbed?.pageSize || 200);
     imgbedRecursiveInput.checked = safe.imgbed?.recursive !== false;
+
+    if (directoryTree) {
+      currentDirectoryPath = normalizeDirPath(safe.imgbed?.listDir || "");
+      renderDirectoryPicker();
+    }
   }
 
   function resetConfigForm() {
@@ -144,6 +340,7 @@
       setStatus("已恢复到最近一次读取的配置。");
       return;
     }
+    clearDirectoryPicker();
     fillConfigForm({
       galleryDataMode: "static",
       displayMode: "fullscreen",
@@ -175,6 +372,7 @@
       const payload = await requestApi(`${API.config}?domain=${encodeURIComponent(domain)}`, {}, true);
       const { config, storageBackend, matchedDomain } = payload.data;
       latestConfig = config;
+      clearDirectoryPicker();
       fillConfigForm(config);
       const domainHint =
         matchedDomain && matchedDomain !== domain
@@ -272,6 +470,7 @@
   function logout() {
     token = "";
     latestConfig = null;
+    clearDirectoryPicker();
     localStorage.removeItem(TOKEN_KEY);
     showLoginPanel();
     setStatus("已退出登录。");
@@ -286,6 +485,18 @@
     loadConfigBtn.addEventListener("click", loadDomainConfig);
     resetConfigBtn.addEventListener("click", resetConfigForm);
     logoutBtn.addEventListener("click", logout);
+    fetchDirsBtn?.addEventListener("click", fetchDirectories);
+    dirRootBtn?.addEventListener("click", () => {
+      currentDirectoryPath = "";
+      renderDirectoryPicker();
+    });
+    dirUpBtn?.addEventListener("click", goToDirectoryParent);
+    dirSelectBtn?.addEventListener("click", selectCurrentDirectoryPath);
+    imgbedListDirInput?.addEventListener("change", () => {
+      if (!directoryTree) return;
+      currentDirectoryPath = normalizeDirPath(imgbedListDirInput.value);
+      renderDirectoryPicker();
+    });
 
     if (!token) {
       showLoginPanel();

@@ -24,6 +24,7 @@ class DataLoader {
             } else {
                 this.galleryData = await this.loadGalleryDataFromStatic();
             }
+            this.galleryData = this.applyConfiguredDirFilter(this.galleryData);
 
             console.log('图片数据加载成功:', this.galleryData);
             return this.galleryData;
@@ -32,6 +33,7 @@ class DataLoader {
             try {
                 // 动态模式失败时，尝试降级读取静态索引
                 this.galleryData = await this.loadGalleryDataFromStatic();
+                this.galleryData = this.applyConfiguredDirFilter(this.galleryData);
                 console.warn('已降级为静态索引模式');
                 return this.galleryData;
             } catch (fallbackError) {
@@ -169,8 +171,9 @@ class DataLoader {
         urlObj.searchParams.set('content', options.content || 'image');
         urlObj.searchParams.set('orientation', options.orientation || 'auto');
 
-        if (options.dir) {
-            urlObj.searchParams.set('dir', options.dir);
+        const preferredDir = this.normalizeDirPath(options.dir || this.getConfiguredListDir(source));
+        if (preferredDir) {
+            urlObj.searchParams.set('dir', preferredDir);
         }
 
         const response = await fetch(urlObj.toString(), {
@@ -242,7 +245,19 @@ class DataLoader {
             this.runtimeSourceConfig = null;
             return;
         }
-        this.runtimeSourceConfig = { ...sourceConfig };
+        const normalized = {};
+        Object.entries(sourceConfig).forEach(([key, value]) => {
+            if (value === null || value === undefined) return;
+            if (typeof value === 'string') {
+                const trimmed = value.trim();
+                if (!trimmed) return;
+                normalized[key] = trimmed;
+                return;
+            }
+            normalized[key] = value;
+        });
+
+        this.runtimeSourceConfig = Object.keys(normalized).length ? normalized : null;
     }
 
     shuffleImages(images) {
@@ -270,6 +285,99 @@ class DataLoader {
         }
 
         return `${baseUrl}/${clean}`;
+    }
+
+    normalizeDirPath(pathValue) {
+        return String(pathValue || '').trim().replace(/^\/+|\/+$/g, '');
+    }
+
+    getConfiguredListDir(source = null) {
+        const sourceInfo = source || this.getSourceInfo() || {};
+        return this.normalizeDirPath(sourceInfo.list_dir || sourceInfo.listDir || '');
+    }
+
+    extractRelativePathFromImageUrl(imageUrl, fileRoutePrefix) {
+        if (!imageUrl) return '';
+
+        try {
+            const parsed = new URL(imageUrl, window.location.origin);
+            let pathname = decodeURIComponent(parsed.pathname || '').replace(/^\/+/, '');
+            const cleanPrefix = this.normalizeDirPath(fileRoutePrefix || '/file');
+            if (cleanPrefix && pathname.startsWith(`${cleanPrefix}/`)) {
+                pathname = pathname.slice(cleanPrefix.length + 1);
+            }
+            return pathname;
+        } catch {
+            return '';
+        }
+    }
+
+    applyConfiguredDirFilter(galleryData) {
+        if (!galleryData || typeof galleryData !== 'object' || !galleryData.gallery) {
+            return galleryData;
+        }
+
+        const source = this.getSourceInfo() || {};
+        const displayDir = this.getConfiguredListDir(source);
+        if (!displayDir) return galleryData;
+        const sourceListDir = this.normalizeDirPath(
+            galleryData?.source?.list_dir || galleryData?.source?.listDir || ''
+        );
+
+        // 数据源已经按同一目录过滤过，直接复用，避免二次误筛
+        if (sourceListDir && sourceListDir === displayDir) {
+            return {
+                ...galleryData,
+                source: {
+                    ...(galleryData.source || {}),
+                    list_dir: displayDir,
+                },
+            };
+        }
+
+        // 若数据源已在父目录过滤过，转为对子路径进行二次筛选
+        let effectiveDir = displayDir;
+        if (sourceListDir && displayDir.startsWith(`${sourceListDir}/`)) {
+            effectiveDir = displayDir.slice(sourceListDir.length + 1);
+        }
+        if (!effectiveDir) return galleryData;
+
+        const fileRoutePrefix = source.file_route_prefix || source.fileRoutePrefix || '/file';
+        const filteredGallery = {};
+        let totalImages = 0;
+
+        Object.entries(galleryData.gallery || {}).forEach(([category, categoryData]) => {
+            const images = Array.isArray(categoryData?.images) ? categoryData.images : [];
+            const matchedImages = images.filter((imageItem) => {
+                const relativePath = this.extractRelativePathFromImageUrl(
+                    imageItem.original || imageItem.preview,
+                    fileRoutePrefix
+                );
+                return relativePath === effectiveDir || relativePath.startsWith(`${effectiveDir}/`);
+            });
+
+            if (matchedImages.length) {
+                filteredGallery[category] = {
+                    ...(categoryData || {}),
+                    images: matchedImages,
+                };
+                totalImages += matchedImages.length;
+            }
+        });
+
+        console.log(
+            `按目录筛选图片: dir=${displayDir}, effectiveDir=${effectiveDir}, 匹配数量=${totalImages}`
+        );
+
+        return {
+            ...galleryData,
+            gallery: filteredGallery,
+            total_images: totalImages,
+            source: {
+                ...(galleryData.source || {}),
+                list_dir: displayDir,
+            },
+        };
     }
 }
 

@@ -199,6 +199,70 @@ button:disabled {
   gap: 8px;
 }
 
+.dir-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.dir-picker {
+  margin-top: 8px;
+  border: 1px solid #d5dde6;
+  border-radius: 10px;
+  background: #f9fbfc;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.dir-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dir-current-path {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.dir-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dir-breadcrumb button {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.dir-children {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dir-node-btn {
+  min-height: 36px;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--text);
+  border: 1px solid #c5ced8;
+}
+
+.dir-node-btn:hover {
+  background: #f1f5f9;
+}
+
+.dir-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
 .status-card {
   background: #101828;
   color: #f8fafc;
@@ -228,6 +292,10 @@ button:disabled {
   }
 
   .domain-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .dir-input-row {
     grid-template-columns: 1fr;
   }
 

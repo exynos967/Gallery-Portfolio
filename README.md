@@ -133,10 +133,16 @@ admin / admin
   - 列表接口 `listEndpoint`
   - 随机图接口 `randomEndpoint`
   - 文件前缀 `fileRoutePrefix`
-  - 列表目录 `listDir`
+  - 显示目录 `listDir`
   - 预览目录 `previewDir`
   - 分页大小 `pageSize`
   - 递归子目录 `recursive`
+
+`listDir` 用于按 ImgBed 文件夹筛选展示内容：
+- `waterfall`：仅展示该目录下图片
+- `fullscreen`：随机图接口会附带 `dir` 参数，仅从该目录随机
+- 随机接口失败时，前端回退到图库随机时也只会从已筛选结果中取图
+- 管理后台支持“获取目录”按钮，可分层浏览并一层层选择目录
 
 ---
 
@@ -266,6 +272,7 @@ IMGBED_PREVIEW_*
 - `POST /api/admin/login`：登录获取 token
 - `GET /api/admin/config?domain=example.com`：读取域名配置
 - `PUT /api/admin/config`：保存域名配置
+- `POST /api/admin/directories`：按当前 ImgBed 配置拉取目录树（用于后台分层选择 `listDir`）
 
 ---
 
