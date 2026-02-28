@@ -89,13 +89,16 @@ class Gallery {
             return;
         }
 
-        const primaryUrl = imageData.original || imageData.preview;
-        const fallbackUrl = imageData.preview && imageData.preview !== primaryUrl ? imageData.preview : '';
+        // 单图模式优先加载 preview，首屏更快，再后台无感升级到原图
+        const previewUrl = imageData.preview || imageData.original;
+        const originalUrl = imageData.original || imageData.preview;
+        let displayedUrl = '';
 
         try {
-            await this.loadImageToElement(this.singleImageElement, primaryUrl);
+            await this.loadImageToElement(this.singleImageElement, previewUrl, { fetchPriority: 'high' });
+            displayedUrl = previewUrl;
         } catch (error) {
-            if (!fallbackUrl) {
+            if (!originalUrl || originalUrl === previewUrl) {
                 console.error('全屏单图加载失败:', error);
                 stage.classList.add('empty');
                 stage.textContent = 'Image load failed';
@@ -104,7 +107,8 @@ class Gallery {
             }
 
             try {
-                await this.loadImageToElement(this.singleImageElement, fallbackUrl);
+                await this.loadImageToElement(this.singleImageElement, originalUrl, { fetchPriority: 'high' });
+                displayedUrl = originalUrl;
             } catch (fallbackError) {
                 console.error('全屏单图加载失败（含回退）:', fallbackError);
                 stage.classList.add('empty');
@@ -116,6 +120,10 @@ class Gallery {
 
         stage.classList.remove('empty');
         this.hideLoading();
+
+        if (originalUrl && displayedUrl && originalUrl !== displayedUrl) {
+            this.preloadAndSwapSingleImageOriginal(originalUrl);
+        }
     }
 
     ensureSingleImageStage() {
@@ -161,7 +169,7 @@ class Gallery {
         return allImages[0];
     }
 
-    loadImageToElement(imageElement, imageUrl) {
+    loadImageToElement(imageElement, imageUrl, options = {}) {
         return new Promise((resolve, reject) => {
             if (!imageUrl) {
                 reject(new Error('image url is empty'));
@@ -169,6 +177,18 @@ class Gallery {
             }
 
             const loader = new Image();
+            try {
+                loader.decoding = 'async';
+            } catch {
+                // ignore unsupported browsers
+            }
+            try {
+                if (options.fetchPriority) {
+                    loader.fetchPriority = options.fetchPriority;
+                }
+            } catch {
+                // ignore unsupported browsers
+            }
             loader.onload = () => {
                 imageElement.src = imageUrl;
                 resolve();
@@ -178,6 +198,33 @@ class Gallery {
             };
             loader.src = imageUrl;
         });
+    }
+
+    preloadAndSwapSingleImageOriginal(originalUrl) {
+        const loader = new Image();
+        try {
+            loader.decoding = 'async';
+        } catch {
+            // ignore unsupported browsers
+        }
+        try {
+            loader.fetchPriority = 'low';
+        } catch {
+            // ignore unsupported browsers
+        }
+
+        loader.onload = () => {
+            if (!this.singleImageMode || !this.singleImageElement) {
+                return;
+            }
+            this.singleImageElement.src = originalUrl;
+        };
+
+        loader.onerror = () => {
+            // 保持当前 preview，无需打断用户
+        };
+
+        loader.src = originalUrl;
     }
 
     hideLoading() {

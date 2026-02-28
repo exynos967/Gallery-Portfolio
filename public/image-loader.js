@@ -16,6 +16,7 @@ class ImageLoader {
         this.scrollDelta = 0;
         this.loadingImages = [];
         this.loadedImageUrls = new Set();
+        this.preloadedImages = [];
         this.currentHighResImage = null;
         this.isModalOpen = false;
         
@@ -250,15 +251,15 @@ class ImageLoader {
         // 根据屏幕大小动态调整额外行数
         let additionalRows;
         if (viewportWidth < 600) {
-            additionalRows = 3; // 手机端：更多预加载
+            additionalRows = 1; // 手机端：适中预加载，减少首屏带宽竞争
         } else if (viewportWidth < 900) {
-            additionalRows = 2; // 平板端：中等预加载
+            additionalRows = 1; // 平板端：适中预加载
         } else if (viewportWidth < 1200) {
-            additionalRows = 2; // 小桌面：中等预加载
+            additionalRows = 1; // 小桌面：适中预加载
         } else if (viewportWidth < 1500) {
-            additionalRows = 1; // 大桌面：较少预加载
+            additionalRows = 0; // 大桌面：优先当前可视区
         } else {
-            additionalRows = 1; // 超大屏幕：最少预加载
+            additionalRows = 0; // 超大屏幕：优先当前可视区
         }
         
         const totalRowsToLoad = rowsToFillScreen + additionalRows;
@@ -314,8 +315,8 @@ class ImageLoader {
             // 图片加载
             const img = new Image();
             // 启用原生懒加载与异步解码
-            //try { img.loading = 'lazy'; } catch (e) {}
-            //try { img.decoding = 'async'; } catch (e) {}
+            try { img.loading = 'lazy'; } catch (e) {}
+            try { img.decoding = 'async'; } catch (e) {}
             
             // 预览图缺失检测
             let previewFailed = false;
@@ -433,6 +434,10 @@ class ImageLoader {
         const images = this.getCurrentImages();
         
         if (this.currentIndex >= images.length) return;
+        if (this.shouldReduceNetworkUsage()) {
+            console.log('检测到弱网或省流量模式，跳过预加载');
+            return;
+        }
         
         // 根据屏幕大小和列数动态调整预加载数量
         const viewportWidth = window.innerWidth;
@@ -442,50 +447,52 @@ class ImageLoader {
         let preloadCount;
         
         if (viewportWidth < 600) {
-            // 手机端：预加载更多图片，确保滚动流畅
-            const rowsToPreload = Math.ceil(viewportHeight / 200) + 2; // 屏幕高度对应的行数 + 2行
+            // 手机端：限制预加载行数，避免抢占首屏带宽
+            const rowsToPreload = Math.ceil(viewportHeight / 350);
             preloadCount = this.columns * rowsToPreload;
         } else if (viewportWidth < 900) {
-            // 平板端：中等预加载
-            const rowsToPreload = Math.ceil(viewportHeight / 250) + 1;
+            // 平板端：限制预加载行数
+            const rowsToPreload = Math.ceil(viewportHeight / 450);
             preloadCount = this.columns * rowsToPreload;
         } else if (viewportWidth < 1200) {
-            // 小桌面：较少预加载
-            const rowsToPreload = Math.ceil(viewportHeight / 300) + 1;
+            // 小桌面：限制预加载行数
+            const rowsToPreload = Math.ceil(viewportHeight / 550);
             preloadCount = this.columns * rowsToPreload;
         } else if (viewportWidth < 1500) {
-            // 大桌面：更少预加载
-            const rowsToPreload = Math.ceil(viewportHeight / 350) + 1;
+            // 大桌面：仅预加载一行上下文
+            const rowsToPreload = Math.ceil(viewportHeight / 700);
             preloadCount = this.columns * rowsToPreload;
         } else {
-            // 超大屏幕：最少预加载
-            const rowsToPreload = Math.ceil(viewportHeight / 400) + 1;
+            // 超大屏幕：仅预加载一行上下文
+            const rowsToPreload = Math.ceil(viewportHeight / 850);
             preloadCount = this.columns * rowsToPreload;
         }
         
-        // 确保预加载数量在合理范围内
-        preloadCount = Math.max(this.columns * 2, Math.min(preloadCount, this.columns * 8));
+        // 预加载限制为 1-3 行，避免过度抢占网络
+        preloadCount = Math.max(this.columns, Math.min(preloadCount, this.columns * 3));
         
         const endIndex = Math.min(this.currentIndex + preloadCount, images.length);
         
-        let preloadContainer = document.getElementById('preload-container');
-        if (!preloadContainer) {
-            preloadContainer = document.createElement('div');
-            preloadContainer.id = 'preload-container';
-            preloadContainer.style.display = 'none';
-            document.body.appendChild(preloadContainer);
-        }
-        
-        preloadContainer.innerHTML = '';
+        this.preloadedImages = [];
         
         for (let i = this.currentIndex; i < endIndex; i++) {
             const imageData = images[i];
             const preloadImg = new Image();
+            try { preloadImg.decoding = 'async'; } catch (e) {}
+            try { preloadImg.fetchPriority = 'low'; } catch (e) {}
             preloadImg.src = imageData.preview;
-            preloadContainer.appendChild(preloadImg);
+            this.preloadedImages.push(preloadImg);
         }
         
         console.log(`预加载了${endIndex - this.currentIndex}张图片 (屏幕: ${viewportWidth}x${viewportHeight}, 列数: ${this.columns}, 预加载: ${preloadCount})`);
+    }
+
+    shouldReduceNetworkUsage() {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!connection) return false;
+        if (connection.saveData) return true;
+        const effectiveType = String(connection.effectiveType || '').toLowerCase();
+        return effectiveType === 'slow-2g' || effectiveType === '2g';
     }
 
     // 处理所有图片加载完成
