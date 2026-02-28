@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gallery Admin</title>
-    <link rel="stylesheet" href="admin.css?v=20260301-1" />
+    <link rel="stylesheet" href="admin.css?v=20260301-2" />
   </head>
   <body>
     <main class="admin-shell">
@@ -103,6 +103,17 @@
             </div>
 
             <div class="field">
+              <label for="imgbed-random-orientation">随机图方向</label>
+              <select id="imgbed-random-orientation" name="imgbed-random-orientation">
+                <option value="">不限制（推荐）</option>
+                <option value="auto">自动判定（auto）</option>
+                <option value="landscape">仅横图（landscape）</option>
+                <option value="portrait">仅竖图（portrait）</option>
+                <option value="square">仅方图（square）</option>
+              </select>
+            </div>
+
+            <div class="field">
               <label for="imgbed-file-prefix">文件路由前缀</label>
               <input id="imgbed-file-prefix" name="imgbed-file-prefix" type="text" placeholder="/file" />
             </div>
@@ -197,6 +208,6 @@
       </section>
     </main>
 
-    <script src="admin.js?v=20260301-1"></script>
+    <script src="admin.js?v=20260301-2"></script>
   </body>
 </html>

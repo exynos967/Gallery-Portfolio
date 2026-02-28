@@ -173,9 +173,7 @@ class Gallery {
     async getSingleImageData() {
         if (this.dataLoader.hasRandomApi()) {
             try {
-                return await this.dataLoader.fetchRandomImage({
-                    orientation: 'auto',
-                });
+                return await this.dataLoader.fetchRandomImage();
             } catch (error) {
                 console.warn('随机图接口失败，回退本地数据:', error);
             }
@@ -704,6 +702,9 @@ class Gallery {
 
         const baseUrl = String(imgbedConfig.baseUrl || imgbedConfig.base_url || '').trim();
         const randomEndpoint = String(imgbedConfig.randomEndpoint || imgbedConfig.random_endpoint || '').trim();
+        const randomOrientation = String(
+            imgbedConfig.randomOrientation || imgbedConfig.random_orientation || ''
+        ).trim();
         const listEndpoint = String(imgbedConfig.listEndpoint || imgbedConfig.list_endpoint || '').trim();
         const fileRoutePrefix = String(imgbedConfig.fileRoutePrefix || imgbedConfig.file_route_prefix || '').trim();
         const listDir = String(imgbedConfig.listDir || imgbedConfig.list_dir || '').trim();
@@ -711,6 +712,7 @@ class Gallery {
 
         if (baseUrl) runtimeSource.base_url = baseUrl;
         if (randomEndpoint) runtimeSource.random_endpoint = randomEndpoint;
+        if (randomOrientation) runtimeSource.random_orientation = randomOrientation;
         if (listEndpoint) runtimeSource.list_endpoint = listEndpoint;
         if (fileRoutePrefix) runtimeSource.file_route_prefix = fileRoutePrefix;
         if (listDir) runtimeSource.list_dir = listDir;

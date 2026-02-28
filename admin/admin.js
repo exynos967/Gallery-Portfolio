@@ -36,6 +36,7 @@
   const imgbedApiTokenInput = document.getElementById("imgbed-api-token");
   const imgbedListEndpointInput = document.getElementById("imgbed-list-endpoint");
   const imgbedRandomEndpointInput = document.getElementById("imgbed-random-endpoint");
+  const imgbedRandomOrientationInput = document.getElementById("imgbed-random-orientation");
   const imgbedFilePrefixInput = document.getElementById("imgbed-file-prefix");
   const imgbedListDirInput = document.getElementById("imgbed-list-dir");
   const imgbedPreviewDirInput = document.getElementById("imgbed-preview-dir");
@@ -307,6 +308,7 @@
         apiToken: imgbedApiTokenInput.value.trim(),
         listEndpoint: imgbedListEndpointInput.value.trim(),
         randomEndpoint: imgbedRandomEndpointInput.value.trim(),
+        randomOrientation: (imgbedRandomOrientationInput?.value || "").trim(),
         fileRoutePrefix: imgbedFilePrefixInput.value.trim() || "/file",
         listDir: imgbedListDirInput.value.trim(),
         previewDir: imgbedPreviewDirInput.value.trim() || "0_preview",
@@ -332,6 +334,11 @@
     imgbedApiTokenInput.value = safe.imgbed?.apiToken || "";
     imgbedListEndpointInput.value = safe.imgbed?.listEndpoint || "";
     imgbedRandomEndpointInput.value = safe.imgbed?.randomEndpoint || "";
+    if (imgbedRandomOrientationInput) {
+      const savedOrientation = String(safe.imgbed?.randomOrientation || "").trim().toLowerCase();
+      const knownOptions = ["", "auto", "landscape", "portrait", "square"];
+      imgbedRandomOrientationInput.value = knownOptions.includes(savedOrientation) ? savedOrientation : "";
+    }
     imgbedFilePrefixInput.value = safe.imgbed?.fileRoutePrefix || "/file";
     imgbedListDirInput.value = safe.imgbed?.listDir || "";
     imgbedPreviewDirInput.value = safe.imgbed?.previewDir || "0_preview";
@@ -366,6 +373,7 @@
         apiToken: "",
         listEndpoint: "/api/manage/list",
         randomEndpoint: "/random",
+        randomOrientation: "",
         fileRoutePrefix: "/file",
         listDir: "",
         previewDir: "0_preview",

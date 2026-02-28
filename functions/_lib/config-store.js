@@ -4,6 +4,7 @@ const initializedD1 = new WeakSet();
 const D1_TABLE_NAME = "gallery_admin_config";
 const MAX_IMGBED_PAGE_SIZE = 500;
 const MAX_UPLOAD_TEXT_LENGTH = 500;
+const VALID_RANDOM_ORIENTATIONS = new Set(["", "auto", "landscape", "portrait", "square"]);
 
 const DEFAULT_UPLOAD_MODAL_TITLE = "上传图片";
 const DEFAULT_UPLOAD_BUTTON_TEXT = "上传图片";
@@ -50,11 +51,23 @@ function toPositiveInt(input, fallbackValue, maxValue = Number.MAX_SAFE_INTEGER)
   return Math.min(Math.floor(value), maxValue);
 }
 
+function normalizeRandomOrientation(input, fallbackValue = "") {
+  const normalizedFallback = String(fallbackValue || "").trim().toLowerCase();
+  const safeFallback = VALID_RANDOM_ORIENTATIONS.has(normalizedFallback) ? normalizedFallback : "";
+  const normalized = String(input || "").trim().toLowerCase();
+  if (!normalized) return safeFallback;
+  return VALID_RANDOM_ORIENTATIONS.has(normalized) ? normalized : safeFallback;
+}
+
 function normalizeImgbedConfig(imgbedConfig = {}, fallbackImgbed = {}) {
   return {
     baseUrl: String(imgbedConfig.baseUrl || fallbackImgbed.baseUrl || "").trim(),
     listEndpoint: String(imgbedConfig.listEndpoint || fallbackImgbed.listEndpoint || "").trim(),
     randomEndpoint: String(imgbedConfig.randomEndpoint || fallbackImgbed.randomEndpoint || "").trim(),
+    randomOrientation: normalizeRandomOrientation(
+      imgbedConfig.randomOrientation,
+      fallbackImgbed.randomOrientation || ""
+    ),
     fileRoutePrefix:
       String(imgbedConfig.fileRoutePrefix || fallbackImgbed.fileRoutePrefix || "/file").trim() || "/file",
     apiToken: String(imgbedConfig.apiToken || fallbackImgbed.apiToken || "").trim(),
@@ -123,6 +136,7 @@ function makeDefaultConfig(env) {
         baseUrl: env.DEFAULT_IMGBED_BASE_URL,
         listEndpoint: env.DEFAULT_IMGBED_LIST_ENDPOINT,
         randomEndpoint: env.DEFAULT_IMGBED_RANDOM_ENDPOINT,
+        randomOrientation: env.DEFAULT_IMGBED_RANDOM_ORIENTATION,
         fileRoutePrefix: env.DEFAULT_IMGBED_FILE_ROUTE_PREFIX,
         apiToken: env.DEFAULT_IMGBED_API_TOKEN,
         listDir: env.DEFAULT_IMGBED_LIST_DIR,
@@ -266,6 +280,7 @@ export function toPublicConfig(config = {}) {
       baseUrl: String(config.imgbed?.baseUrl || "").trim(),
       listEndpoint: String(config.imgbed?.listEndpoint || "").trim(),
       randomEndpoint: String(config.imgbed?.randomEndpoint || "").trim(),
+      randomOrientation: normalizeRandomOrientation(config.imgbed?.randomOrientation, ""),
       fileRoutePrefix: String(config.imgbed?.fileRoutePrefix || "/file").trim() || "/file",
       listDir: String(config.imgbed?.listDir || "").trim(),
       previewDir: String(config.imgbed?.previewDir || "0_preview").trim() || "0_preview",

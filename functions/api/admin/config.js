@@ -2,6 +2,14 @@ import { requireAdmin } from "../../_lib/admin-auth.js";
 import { getDomainConfig, saveDomainConfig } from "../../_lib/config-store.js";
 import { json, noContent, normalizeDomain, pickRequestDomain, readJson } from "../../_lib/http.js";
 
+const VALID_RANDOM_ORIENTATIONS = new Set(["", "auto", "landscape", "portrait", "square"]);
+
+function normalizeRandomOrientation(input) {
+  const normalized = String(input || "").trim().toLowerCase();
+  if (!normalized) return "";
+  return VALID_RANDOM_ORIENTATIONS.has(normalized) ? normalized : "";
+}
+
 function sanitizeInputConfig(config) {
   const displayMode = String(config?.displayMode || "").toLowerCase() === "waterfall" ? "waterfall" : "fullscreen";
   const shuffleEnabled = config?.shuffleEnabled === undefined ? true : Boolean(config.shuffleEnabled);
@@ -22,6 +30,7 @@ function sanitizeInputConfig(config) {
       baseUrl: String(config?.imgbed?.baseUrl || "").trim(),
       listEndpoint: String(config?.imgbed?.listEndpoint || "").trim(),
       randomEndpoint: String(config?.imgbed?.randomEndpoint || "").trim(),
+      randomOrientation: normalizeRandomOrientation(config?.imgbed?.randomOrientation),
       fileRoutePrefix: String(config?.imgbed?.fileRoutePrefix || "/file").trim() || "/file",
       apiToken: String(config?.imgbed?.apiToken || "").trim(),
       listDir: String(config?.imgbed?.listDir || "").trim(),

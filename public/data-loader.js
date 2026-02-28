@@ -169,7 +169,14 @@ class DataLoader {
         const urlObj = new URL(randomUrl);
         urlObj.searchParams.set('type', 'url');
         urlObj.searchParams.set('content', options.content || 'image');
-        urlObj.searchParams.set('orientation', options.orientation || 'auto');
+        const orientationInput =
+            options.orientation !== undefined
+                ? options.orientation
+                : this.getConfiguredRandomOrientation(source);
+        const preferredOrientation = this.normalizeRandomOrientation(orientationInput);
+        if (preferredOrientation) {
+            urlObj.searchParams.set('orientation', preferredOrientation);
+        }
 
         const preferredDir = this.normalizeDirPath(options.dir || this.getConfiguredListDir(source));
         if (preferredDir) {
@@ -294,6 +301,20 @@ class DataLoader {
     getConfiguredListDir(source = null) {
         const sourceInfo = source || this.getSourceInfo() || {};
         return this.normalizeDirPath(sourceInfo.list_dir || sourceInfo.listDir || '');
+    }
+
+    normalizeRandomOrientation(orientation) {
+        const normalized = String(orientation || '').trim().toLowerCase();
+        const valid = ['auto', 'landscape', 'portrait', 'square'];
+        if (!normalized) return '';
+        return valid.includes(normalized) ? normalized : '';
+    }
+
+    getConfiguredRandomOrientation(source = null) {
+        const sourceInfo = source || this.getSourceInfo() || {};
+        return this.normalizeRandomOrientation(
+            sourceInfo.random_orientation || sourceInfo.randomOrientation || ''
+        );
     }
 
     extractRelativePathFromImageUrl(imageUrl, fileRoutePrefix) {

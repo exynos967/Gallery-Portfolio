@@ -4,6 +4,7 @@ import { json, noContent, normalizeDomain, pickRequestDomain } from "../_lib/htt
 const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".avif", ".svg"];
 const MAX_FILES_LIMIT = 10000;
 const CACHE_TTL_MS = 60 * 1000;
+const VALID_RANDOM_ORIENTATIONS = new Set(["", "auto", "landscape", "portrait", "square"]);
 
 const runtimeCache = new Map();
 
@@ -131,12 +132,19 @@ function buildFileUrl(baseUrl, fileRoutePrefix, relativePath) {
   return `${String(baseUrl).replace(/\/+$/, "")}/${prefix}${encodeURI(cleanPath)}`;
 }
 
+function normalizeRandomOrientation(input) {
+  const normalized = String(input || "").trim().toLowerCase();
+  if (!normalized) return "";
+  return VALID_RANDOM_ORIENTATIONS.has(normalized) ? normalized : "";
+}
+
 function buildSourceConfig(config, domain) {
   return {
     domain,
     baseUrl: String(config.imgbed?.baseUrl || "").trim(),
     listEndpoint: String(config.imgbed?.listEndpoint || "/api/manage/list").trim() || "/api/manage/list",
     randomEndpoint: String(config.imgbed?.randomEndpoint || "/random").trim() || "/random",
+    randomOrientation: normalizeRandomOrientation(config.imgbed?.randomOrientation),
     fileRoutePrefix: String(config.imgbed?.fileRoutePrefix || "/file").trim() || "/file",
     apiToken: String(config.imgbed?.apiToken || "").trim(),
     listDir: String(config.imgbed?.listDir || "").trim(),
@@ -276,6 +284,7 @@ function buildGalleryPayload(sourceConfig, files) {
       base_url: sourceConfig.baseUrl,
       list_endpoint: buildAbsoluteUrl(sourceConfig.baseUrl, sourceConfig.listEndpoint),
       random_endpoint: buildAbsoluteUrl(sourceConfig.baseUrl, sourceConfig.randomEndpoint),
+      random_orientation: sourceConfig.randomOrientation || "",
       file_route_prefix: sourceConfig.fileRoutePrefix,
       list_dir: sourceConfig.listDir || "/",
       preview_dir: sourceConfig.previewDir,
@@ -296,6 +305,7 @@ function makeConfigSignature(sourceConfig) {
     baseUrl: sourceConfig.baseUrl,
     listEndpoint: sourceConfig.listEndpoint,
     randomEndpoint: sourceConfig.randomEndpoint,
+    randomOrientation: sourceConfig.randomOrientation,
     fileRoutePrefix: sourceConfig.fileRoutePrefix,
     listDir: sourceConfig.listDir,
     previewDir: sourceConfig.previewDir,

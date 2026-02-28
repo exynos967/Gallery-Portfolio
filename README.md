@@ -135,6 +135,7 @@ admin / admin
   - 私有令牌 `apiToken`（仅管理端保存，不在 public-config 暴露）
   - 列表接口 `listEndpoint`
   - 随机图接口 `randomEndpoint`
+  - 随机图方向 `randomOrientation`（可选：空值/`auto`/`landscape`/`portrait`/`square`）
   - 文件前缀 `fileRoutePrefix`
   - 显示目录 `listDir`
   - 预览目录 `previewDir`
@@ -149,6 +150,7 @@ admin / admin
 `listDir` 用于按 ImgBed 文件夹筛选展示内容：
 - `waterfall`：仅展示该目录下图片
 - `fullscreen`：随机图接口会附带 `dir` 参数，仅从该目录随机
+- `randomOrientation` 为空时不筛方向；设置后会把对应 `orientation` 参数带给随机图接口
 - 随机接口失败时，前端回退到图库随机时也只会从已筛选结果中取图
 - 管理后台支持“获取目录”按钮，可分层浏览并一层层选择目录
 
@@ -189,6 +191,7 @@ DEFAULT_IMGBED_BASE_URL=
 DEFAULT_IMGBED_API_TOKEN=
 DEFAULT_IMGBED_LIST_ENDPOINT=/api/manage/list
 DEFAULT_IMGBED_RANDOM_ENDPOINT=/random
+DEFAULT_IMGBED_RANDOM_ORIENTATION=
 DEFAULT_IMGBED_FILE_ROUTE_PREFIX=/file
 DEFAULT_IMGBED_LIST_DIR=
 DEFAULT_IMGBED_PREVIEW_DIR=0_preview
@@ -230,6 +233,7 @@ DEFAULT_IMGBED_BASE_URL
 DEFAULT_IMGBED_API_TOKEN
 DEFAULT_IMGBED_LIST_ENDPOINT
 DEFAULT_IMGBED_RANDOM_ENDPOINT
+DEFAULT_IMGBED_RANDOM_ORIENTATION
 DEFAULT_IMGBED_FILE_ROUTE_PREFIX
 DEFAULT_IMGBED_LIST_DIR
 DEFAULT_IMGBED_PREVIEW_DIR
@@ -335,7 +339,13 @@ IMGBED_PREVIEW_*
 - 前台会在配置里检测 ImgBed 参数
 - 确认 `baseUrl` 或 `randomEndpoint` 已配置
 
-### 3) 本地 `npm run serve` 下 `/api/*` 404
+### 3) 全屏模式刷新后总是同一张图
+
+- 先检查后台是否设置了 `listDir` 或 `randomOrientation`
+- 当目录+方向过滤后候选图只剩 1 张时，看起来会“固定不变”
+- 可将 `randomOrientation` 设为空值（不限制）后再试
+
+### 4) 本地 `npm run serve` 下 `/api/*` 404
 
 - 这是正常现象（静态服务不跑 Functions）
 - 使用 `wrangler pages dev .` 调试 Functions
