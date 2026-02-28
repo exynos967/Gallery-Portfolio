@@ -64,13 +64,18 @@ class Gallery {
         this.applyBootDisplayMode(this.settings.fullscreen);
         this.dataLoader.setShuffleEnabled(this.settings.shuffle);
 
-        await this.dataLoader.loadGalleryData();
-
         if (this.settings.fullscreen) {
             this.singleImageMode = true;
+            // 全屏模式优先走随机图接口，避免首屏等待整库列表。
+            // 若未配置随机接口，再回退加载图库数据。
+            if (!this.dataLoader.hasRandomApi()) {
+                await this.dataLoader.loadGalleryData();
+            }
             await this.initSingleImageMode();
             return;
         }
+
+        await this.dataLoader.loadGalleryData();
 
         this.autoScroll = new AutoScroll();
         this.initComponents();
@@ -103,6 +108,7 @@ class Gallery {
         document.body.classList.add('single-image-mode');
         this.setupFullscreenUploadUi();
         const stage = this.ensureSingleImageStage();
+        this.singleImageElement?.classList.remove('single-image-ready');
         const imageData = await this.getSingleImageData();
 
         if (!imageData) {
@@ -179,7 +185,11 @@ class Gallery {
             }
         }
 
-        const allImages = this.dataLoader.getAllImages();
+        let allImages = this.dataLoader.getAllImages();
+        if (!allImages.length) {
+            await this.dataLoader.loadGalleryData();
+            allImages = this.dataLoader.getAllImages();
+        }
         if (!allImages.length) return null;
 
         if (this.settings.shuffle) {
@@ -197,6 +207,8 @@ class Gallery {
                 return;
             }
 
+            imageElement.classList.remove('single-image-ready');
+
             const loader = new Image();
             try {
                 loader.decoding = 'async';
@@ -212,6 +224,7 @@ class Gallery {
             }
             loader.onload = () => {
                 imageElement.src = imageUrl;
+                imageElement.classList.add('single-image-ready');
                 resolve();
             };
             loader.onerror = () => {

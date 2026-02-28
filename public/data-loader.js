@@ -12,6 +12,10 @@ class DataLoader {
 
     // 从本地JSON文件加载图片数据
     async loadGalleryData() {
+        if (this.galleryData) {
+            return this.galleryData;
+        }
+
         if (this.loading) {
             return this.galleryData;
         }

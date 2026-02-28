@@ -87,6 +87,15 @@ body.single-image-mode #single-image {
   height: auto;
   object-fit: contain;
   display: block;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease;
+  will-change: opacity;
+}
+
+body.single-image-mode #single-image.single-image-ready {
+  opacity: 1;
+  visibility: visible;
 }
 
 .fullscreen-upload-btn {
