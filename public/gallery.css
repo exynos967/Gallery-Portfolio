@@ -13,6 +13,14 @@
   transition: opacity 1s; /* Fade-in effect */
 }
 
+/* 全屏模式：默认启用全宽展示 */
+body.fullscreen-mode .gallery {
+  width: 100vw;
+  max-width: none;
+  margin: 0 auto 20px;
+  padding: 12px;
+}
+
 /* Keyframes for image fly-in effect */
 @keyframes flyIn {
   0% {

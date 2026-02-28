@@ -4,6 +4,12 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
+/admin
+  Cache-Control: no-store
+
+/admin/*
+  Cache-Control: no-store
+
 /*.json
   Cache-Control: public, max-age=3600
 

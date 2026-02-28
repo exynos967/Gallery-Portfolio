@@ -1,0 +1,248 @@
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-border: #d9e0e7;
+  --text: #171717;
+  --text-secondary: #4b5563;
+  --primary: #171717;
+  --primary-hover: #2d2d2d;
+  --danger: #b42318;
+  --focus: #2563eb;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+.admin-shell {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.hidden {
+  display: none;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 8px;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+h3 {
+  margin-top: 18px;
+  font-size: 1rem;
+}
+
+.subtitle {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+form {
+  display: grid;
+  gap: 12px;
+}
+
+label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+input,
+select,
+button {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #c5ced8;
+  font-size: 0.95rem;
+}
+
+input,
+select {
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fff;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+  border-color: var(--focus);
+}
+
+button {
+  padding: 0 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 200ms ease, transform 200ms ease;
+}
+
+button:hover {
+  background: var(--primary-hover);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid #c5ced8;
+}
+
+.secondary-btn:hover {
+  background: #f7f8fa;
+}
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.domain-row {
+  margin-top: 8px;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.domain-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 30px;
+}
+
+.checkbox-field input {
+  min-height: auto;
+  width: 18px;
+  height: 18px;
+}
+
+.checkbox-field label {
+  margin: 0;
+}
+
+.actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-card {
+  background: #101828;
+  color: #f8fafc;
+}
+
+#status-text {
+  margin: 0;
+  min-height: 24px;
+}
+
+#status-text[data-level="error"] {
+  color: #fda29b;
+}
+
+#status-text[data-level="success"] {
+  color: #75e0a7;
+}
+
+@media (max-width: 768px) {
+  .card {
+    padding: 16px;
+  }
+
+  .panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .domain-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkbox-field {
+    padding-top: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

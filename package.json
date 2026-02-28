@@ -8,8 +8,8 @@
     "build": "echo '静态网站，无需构建'",
     "dev": "echo '请使用本地服务器运行，如: npx serve .'",
     "serve": "npx serve .",
-    "r2:generate-index": "node generate-gallery-index-r2.js",
-    "r2:generate-previews": "node generate-webp-thumbnail-r2.js"
+    "generate-index": "node generate-gallery-index-imgbed.js",
+    "imgbed:generate-index": "node generate-gallery-index-imgbed.js"
   },
   "keywords": [
     "gallery",
@@ -24,8 +24,6 @@
     "serve": "^14.2.1"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.879.0",
-    "dotenv": "^17.2.1",
-    "sharp": "^0.34.3"
+    "dotenv": "^17.2.1"
   }
 }

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gallery Admin</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <section class="card" id="login-panel">
+        <h1>管理员登录</h1>
+        <p class="subtitle">默认账号密码：admin / admin，建议部署后立即修改环境变量。</p>
+
+        <form id="login-form" novalidate>
+          <label for="username">账号</label>
+          <input id="username" name="username" type="text" autocomplete="username" required />
+
+          <label for="password">密码</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+          <button type="submit" id="login-btn">登录</button>
+        </form>
+      </section>
+
+      <section class="card hidden" id="dashboard-panel">
+        <header class="panel-header">
+          <div>
+            <h2>站点配置</h2>
+            <p class="subtitle">按域名管理访问模式和 ImgBed Worker API 参数。</p>
+          </div>
+          <button id="logout-btn" class="secondary-btn" type="button">退出登录</button>
+        </header>
+
+        <div class="domain-row">
+          <label for="domain-input">目标域名</label>
+          <div class="domain-actions">
+            <input id="domain-input" name="domain" type="text" placeholder="example.com" />
+            <button id="load-config-btn" type="button" class="secondary-btn">读取配置</button>
+          </div>
+        </div>
+
+        <form id="config-form" novalidate>
+          <div class="form-grid">
+            <div class="field">
+              <label for="gallery-data-mode">图库数据源</label>
+              <select id="gallery-data-mode" name="gallery-data-mode">
+                <option value="static">静态索引（gallery-index.json）</option>
+                <option value="imgbed-api">ImgBed API 动态拉取</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="display-mode">访问模式</label>
+              <select id="display-mode" name="display-mode">
+                <option value="fullscreen">全屏模式</option>
+                <option value="waterfall">瀑布流模式</option>
+              </select>
+            </div>
+
+            <div class="field checkbox-field">
+              <input id="shuffle-enabled" name="shuffle-enabled" type="checkbox" />
+              <label for="shuffle-enabled">默认随机排序</label>
+            </div>
+
+            <div class="field full-width">
+              <label for="gallery-index-url">索引地址（可选）</label>
+              <input
+                id="gallery-index-url"
+                name="gallery-index-url"
+                type="url"
+                placeholder="例如：https://example.com/gallery-index.json"
+              />
+            </div>
+          </div>
+
+          <h3>ImgBed Worker API</h3>
+          <div class="form-grid">
+            <div class="field full-width">
+              <label for="imgbed-base-url">ImgBed 基础地址</label>
+              <input id="imgbed-base-url" name="imgbed-base-url" type="url" placeholder="https://img.example.com" />
+            </div>
+
+            <div class="field full-width">
+              <label for="imgbed-api-token">ImgBed API Token（仅服务端保存）</label>
+              <input
+                id="imgbed-api-token"
+                name="imgbed-api-token"
+                type="password"
+                autocomplete="off"
+                placeholder="用于动态拉取图库，不会在 public-config 返回"
+              />
+            </div>
+
+            <div class="field">
+              <label for="imgbed-list-endpoint">列表接口</label>
+              <input id="imgbed-list-endpoint" name="imgbed-list-endpoint" type="text" placeholder="/api/manage/list" />
+            </div>
+
+            <div class="field">
+              <label for="imgbed-random-endpoint">随机图接口</label>
+              <input id="imgbed-random-endpoint" name="imgbed-random-endpoint" type="text" placeholder="/random" />
+            </div>
+
+            <div class="field">
+              <label for="imgbed-file-prefix">文件路由前缀</label>
+              <input id="imgbed-file-prefix" name="imgbed-file-prefix" type="text" placeholder="/file" />
+            </div>
+
+            <div class="field">
+              <label for="imgbed-list-dir">列表目录（可选）</label>
+              <input id="imgbed-list-dir" name="imgbed-list-dir" type="text" placeholder="例如：gallery/photos" />
+            </div>
+
+            <div class="field">
+              <label for="imgbed-preview-dir">预览目录名</label>
+              <input id="imgbed-preview-dir" name="imgbed-preview-dir" type="text" placeholder="0_preview" />
+            </div>
+
+            <div class="field">
+              <label for="imgbed-page-size">分页大小</label>
+              <input id="imgbed-page-size" name="imgbed-page-size" type="number" min="1" max="500" step="1" value="200" />
+            </div>
+
+            <div class="field checkbox-field">
+              <input id="imgbed-recursive" name="imgbed-recursive" type="checkbox" checked />
+              <label for="imgbed-recursive">递归子目录</label>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="save-config-btn" type="submit">保存配置</button>
+            <button id="reset-config-btn" class="secondary-btn" type="button">重置表单</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card status-card">
+        <p id="status-text" role="status" aria-live="polite">准备就绪。</p>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

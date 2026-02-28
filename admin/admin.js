@@ -1,0 +1,296 @@
+(function () {
+  const API = {
+    login: "/api/admin/login",
+    config: "/api/admin/config",
+  };
+
+  const TOKEN_KEY = "gallery_admin_token";
+  let token = localStorage.getItem(TOKEN_KEY) || "";
+  let latestConfig = null;
+
+  const loginPanel = document.getElementById("login-panel");
+  const dashboardPanel = document.getElementById("dashboard-panel");
+  const statusText = document.getElementById("status-text");
+
+  const loginForm = document.getElementById("login-form");
+  const loginBtn = document.getElementById("login-btn");
+  const usernameInput = document.getElementById("username");
+  const passwordInput = document.getElementById("password");
+
+  const logoutBtn = document.getElementById("logout-btn");
+  const domainInput = document.getElementById("domain-input");
+  const loadConfigBtn = document.getElementById("load-config-btn");
+
+  const configForm = document.getElementById("config-form");
+  const saveConfigBtn = document.getElementById("save-config-btn");
+  const resetConfigBtn = document.getElementById("reset-config-btn");
+
+  const galleryDataModeInput = document.getElementById("gallery-data-mode");
+  const displayModeInput = document.getElementById("display-mode");
+  const shuffleEnabledInput = document.getElementById("shuffle-enabled");
+  const galleryIndexUrlInput = document.getElementById("gallery-index-url");
+  const imgbedBaseUrlInput = document.getElementById("imgbed-base-url");
+  const imgbedApiTokenInput = document.getElementById("imgbed-api-token");
+  const imgbedListEndpointInput = document.getElementById("imgbed-list-endpoint");
+  const imgbedRandomEndpointInput = document.getElementById("imgbed-random-endpoint");
+  const imgbedFilePrefixInput = document.getElementById("imgbed-file-prefix");
+  const imgbedListDirInput = document.getElementById("imgbed-list-dir");
+  const imgbedPreviewDirInput = document.getElementById("imgbed-preview-dir");
+  const imgbedPageSizeInput = document.getElementById("imgbed-page-size");
+  const imgbedRecursiveInput = document.getElementById("imgbed-recursive");
+
+  function setStatus(message, level = "info") {
+    statusText.textContent = message;
+    statusText.dataset.level = level;
+  }
+
+  function setButtonLoading(button, loading, loadingText, defaultText) {
+    if (!button) return;
+    button.disabled = loading;
+    button.textContent = loading ? loadingText : defaultText;
+  }
+
+  function normalizeDomain(input) {
+    const raw = String(input || "").trim();
+    if (!raw) return "";
+
+    return raw
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/.*$/, "")
+      .replace(/:\d+$/, "")
+      .toLowerCase();
+  }
+
+  async function requestApi(url, options = {}, requiresAuth = false) {
+    const headers = {
+      Accept: "application/json",
+      ...(options.headers || {}),
+    };
+
+    if (requiresAuth && token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok || payload?.success === false) {
+      const error = new Error(payload?.message || `请求失败：HTTP ${response.status}`);
+      error.status = response.status;
+      error.payload = payload;
+      throw error;
+    }
+
+    return payload;
+  }
+
+  function showLoginPanel() {
+    loginPanel.classList.remove("hidden");
+    dashboardPanel.classList.add("hidden");
+    usernameInput.focus();
+  }
+
+  function showDashboardPanel() {
+    loginPanel.classList.add("hidden");
+    dashboardPanel.classList.remove("hidden");
+    domainInput.focus();
+  }
+
+  function collectConfigFromForm() {
+    const pageSize = Number(imgbedPageSizeInput.value);
+    return {
+      galleryDataMode: galleryDataModeInput.value || "static",
+      displayMode: displayModeInput.value || "fullscreen",
+      shuffleEnabled: Boolean(shuffleEnabledInput.checked),
+      galleryIndexUrl: galleryIndexUrlInput.value.trim(),
+      imgbed: {
+        baseUrl: imgbedBaseUrlInput.value.trim(),
+        apiToken: imgbedApiTokenInput.value.trim(),
+        listEndpoint: imgbedListEndpointInput.value.trim(),
+        randomEndpoint: imgbedRandomEndpointInput.value.trim(),
+        fileRoutePrefix: imgbedFilePrefixInput.value.trim() || "/file",
+        listDir: imgbedListDirInput.value.trim(),
+        previewDir: imgbedPreviewDirInput.value.trim() || "0_preview",
+        recursive: Boolean(imgbedRecursiveInput.checked),
+        pageSize: Number.isFinite(pageSize) && pageSize > 0 ? Math.min(Math.floor(pageSize), 500) : 200,
+      },
+    };
+  }
+
+  function fillConfigForm(config) {
+    const safe = config || {};
+    galleryDataModeInput.value = safe.galleryDataMode === "imgbed-api" ? "imgbed-api" : "static";
+    displayModeInput.value = safe.displayMode === "waterfall" ? "waterfall" : "fullscreen";
+    shuffleEnabledInput.checked = safe.shuffleEnabled !== false;
+    galleryIndexUrlInput.value = safe.galleryIndexUrl || "";
+    imgbedBaseUrlInput.value = safe.imgbed?.baseUrl || "";
+    imgbedApiTokenInput.value = safe.imgbed?.apiToken || "";
+    imgbedListEndpointInput.value = safe.imgbed?.listEndpoint || "";
+    imgbedRandomEndpointInput.value = safe.imgbed?.randomEndpoint || "";
+    imgbedFilePrefixInput.value = safe.imgbed?.fileRoutePrefix || "/file";
+    imgbedListDirInput.value = safe.imgbed?.listDir || "";
+    imgbedPreviewDirInput.value = safe.imgbed?.previewDir || "0_preview";
+    imgbedPageSizeInput.value = String(safe.imgbed?.pageSize || 200);
+    imgbedRecursiveInput.checked = safe.imgbed?.recursive !== false;
+  }
+
+  function resetConfigForm() {
+    if (latestConfig) {
+      fillConfigForm(latestConfig);
+      setStatus("已恢复到最近一次读取的配置。");
+      return;
+    }
+    fillConfigForm({
+      galleryDataMode: "static",
+      displayMode: "fullscreen",
+      shuffleEnabled: true,
+      galleryIndexUrl: "",
+      imgbed: {
+        baseUrl: "",
+        apiToken: "",
+        listEndpoint: "/api/manage/list",
+        randomEndpoint: "/random",
+        fileRoutePrefix: "/file",
+        listDir: "",
+        previewDir: "0_preview",
+        recursive: true,
+        pageSize: 200,
+      },
+    });
+    setStatus("已重置为默认配置。");
+  }
+
+  async function loadDomainConfig() {
+    const domain = normalizeDomain(domainInput.value) || window.location.host;
+    domainInput.value = domain;
+
+    setButtonLoading(loadConfigBtn, true, "读取中...", "读取配置");
+    setStatus(`正在读取 ${domain} 的配置...`);
+
+    try {
+      const payload = await requestApi(`${API.config}?domain=${encodeURIComponent(domain)}`, {}, true);
+      const { config, storageBackend } = payload.data;
+      latestConfig = config;
+      fillConfigForm(config);
+      setStatus(`读取成功，当前存储：${storageBackend}`, "success");
+    } catch (error) {
+      if (error.status === 401) {
+        token = "";
+        localStorage.removeItem(TOKEN_KEY);
+        showLoginPanel();
+        setStatus("登录已过期，请重新登录。", "error");
+        return;
+      }
+      setStatus(`读取失败：${error.message}`, "error");
+    } finally {
+      setButtonLoading(loadConfigBtn, false, "读取中...", "读取配置");
+    }
+  }
+
+  async function login(event) {
+    event.preventDefault();
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!username || !password) {
+      setStatus("请输入账号和密码。", "error");
+      return;
+    }
+
+    setButtonLoading(loginBtn, true, "登录中...", "登录");
+    setStatus("正在验证身份...");
+
+    try {
+      const payload = await requestApi(API.login, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      token = payload.data.token;
+      localStorage.setItem(TOKEN_KEY, token);
+      passwordInput.value = "";
+      showDashboardPanel();
+      setStatus("登录成功。", "success");
+
+      if (!domainInput.value.trim()) {
+        domainInput.value = window.location.host;
+      }
+      await loadDomainConfig();
+    } catch (error) {
+      setStatus(`登录失败：${error.message}`, "error");
+    } finally {
+      setButtonLoading(loginBtn, false, "登录中...", "登录");
+    }
+  }
+
+  async function saveConfig(event) {
+    event.preventDefault();
+    const domain = normalizeDomain(domainInput.value) || window.location.host;
+    domainInput.value = domain;
+
+    const config = collectConfigFromForm();
+    setButtonLoading(saveConfigBtn, true, "保存中...", "保存配置");
+    setStatus(`正在保存 ${domain} 的配置...`);
+
+    try {
+      const payload = await requestApi(
+        API.config,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain, config }),
+        },
+        true
+      );
+
+      latestConfig = payload.data.config;
+      fillConfigForm(latestConfig);
+      setStatus(`保存成功，当前存储：${payload.data.storageBackend}`, "success");
+    } catch (error) {
+      if (error.status === 401) {
+        token = "";
+        localStorage.removeItem(TOKEN_KEY);
+        showLoginPanel();
+        setStatus("登录已过期，请重新登录。", "error");
+        return;
+      }
+      setStatus(`保存失败：${error.message}`, "error");
+    } finally {
+      setButtonLoading(saveConfigBtn, false, "保存中...", "保存配置");
+    }
+  }
+
+  function logout() {
+    token = "";
+    latestConfig = null;
+    localStorage.removeItem(TOKEN_KEY);
+    showLoginPanel();
+    setStatus("已退出登录。");
+  }
+
+  async function bootstrap() {
+    domainInput.value = window.location.host;
+    resetConfigForm();
+
+    loginForm.addEventListener("submit", login);
+    configForm.addEventListener("submit", saveConfig);
+    loadConfigBtn.addEventListener("click", loadDomainConfig);
+    resetConfigBtn.addEventListener("click", resetConfigForm);
+    logoutBtn.addEventListener("click", logout);
+
+    if (!token) {
+      showLoginPanel();
+      return;
+    }
+
+    showDashboardPanel();
+    await loadDomainConfig();
+  }
+
+  bootstrap();
+})();

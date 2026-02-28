@@ -45,6 +45,7 @@ header h1 {
   align-items: center;
   align-items: baseline;
   transition: font-size 0.3s ease-in-out;
+  gap: 8px;
 }
 
 header a {
@@ -62,6 +63,45 @@ header button {
   cursor: pointer;
   transition: font-size 0.3s ease-in-out;
   display: flex;
+}
+
+.header-buttons button {
+  margin-right: 0;
+}
+
+.header-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.header-action-btn.active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.header-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  font-size: 0.8rem;
+  margin-right: 0;
+}
+
+.admin-link:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 header button img {
@@ -172,6 +212,11 @@ body.dark .modal-content {
 
 body.dark #exif-info {
   color: #e0e0e0;
+}
+
+/* 全屏模式（全宽展示） */
+body.fullscreen-mode footer {
+  display: none;
 }
 
 /* 加载原图按钮样式 */
