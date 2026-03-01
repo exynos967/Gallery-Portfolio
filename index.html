@@ -3,7 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gallery-Portfolio</title>
+    <script>
+      (function () {
+        function escapeHtml(input) {
+          return String(input || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
+
+        let title = "Gallery-Portfolio";
+        try {
+          const raw = localStorage.getItem("gallery-site-boot");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const cachedTitle = String(parsed && parsed.title ? parsed.title : "").trim();
+            if (cachedTitle) {
+              title = cachedTitle;
+            }
+          }
+        } catch (_) {
+          // ignore
+        }
+
+        document.write("<title>" + escapeHtml(title) + "</title>");
+      })();
+    </script>
+    <noscript><title>Gallery-Portfolio</title></noscript>
     <script>
       (function () {
         try {
@@ -31,8 +59,8 @@
         display: none !important;
       }
     </style>
-    <link rel="stylesheet" href="public/styles.css?v=20260301-6" />
-    <link rel="stylesheet" href="public/gallery.css?v=20260301-5" />
+    <link rel="stylesheet" href="public/styles.css?v=20260301-7" />
+    <link rel="stylesheet" href="public/gallery.css?v=20260301-7" />
     <link rel="icon" href="public/assets/favicon.svg" type="image/svg+xml" />
   </head>
   <body class="app-booting">
@@ -140,11 +168,11 @@
     </div>
 
     <!-- 加载JavaScript模块 -->
-    <script src="public/data-loader.js?v=20260301-5"></script>
-    <script src="public/tag-filter.js?v=20260301-5"></script>
-    <script src="public/image-loader.js?v=20260301-5"></script>
-    <script src="public/auto-scroll.js?v=20260301-5"></script>
-    <script src="public/layout.js?v=20260301-5"></script>
-    <script src="public/gallery.js?v=20260301-5"></script>
+    <script src="public/data-loader.js?v=20260301-7"></script>
+    <script src="public/tag-filter.js?v=20260301-7"></script>
+    <script src="public/image-loader.js?v=20260301-7"></script>
+    <script src="public/auto-scroll.js?v=20260301-7"></script>
+    <script src="public/layout.js?v=20260301-7"></script>
+    <script src="public/gallery.js?v=20260301-7"></script>
   </body>
 </html> 

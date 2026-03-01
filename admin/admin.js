@@ -6,6 +6,7 @@
   };
 
   const TOKEN_KEY = "gallery_admin_token";
+  const SITE_BOOT_CACHE_KEY = "gallery-site-boot";
   let token = localStorage.getItem(TOKEN_KEY) || "";
   let latestConfig = null;
   let directoryTree = null;
@@ -83,6 +84,61 @@
     return String(input || "")
       .trim()
       .replace(/^\/+|\/+$/g, "");
+  }
+
+  function normalizeHostDomain() {
+    return normalizeDomain(window.location.host);
+  }
+
+  function resolveImgbedFileUrl(pathValue, config) {
+    let raw = String(pathValue || "").trim();
+    if (!raw) return "";
+
+    if (/^https?:\/\//i.test(raw) || raw.startsWith("data:")) {
+      return raw;
+    }
+
+    if (raw.startsWith("imgbed:")) {
+      raw = raw.slice("imgbed:".length).trim();
+    }
+
+    raw = raw.replace(/^\/+/, "");
+
+    const baseUrl = String(config?.imgbed?.baseUrl || "").trim();
+    const fileRoutePrefix = String(config?.imgbed?.fileRoutePrefix || "/file").trim() || "/file";
+
+    if (!baseUrl) {
+      return raw;
+    }
+
+    const cleanBaseUrl = baseUrl.replace(/\/+$/, "");
+    let cleanPath = raw;
+    const cleanPrefix = String(fileRoutePrefix).replace(/^\/+|\/+$/g, "");
+    if (cleanPrefix && !cleanPath.startsWith(`${cleanPrefix}/`)) {
+      cleanPath = `${cleanPrefix}/${cleanPath}`;
+    }
+
+    return `${cleanBaseUrl}/${encodeURI(cleanPath)}`;
+  }
+
+  function persistSiteBootCache(domain, config) {
+    if (!config) return;
+    if (String(domain || "").trim().toLowerCase() !== normalizeHostDomain()) return;
+
+    const title = String(config?.site?.title || "").trim();
+    const imageUrl = resolveImgbedFileUrl(config?.site?.imageUrl, config);
+    try {
+      localStorage.setItem(
+        SITE_BOOT_CACHE_KEY,
+        JSON.stringify({
+          title,
+          imageUrl,
+          updatedAt: new Date().toISOString(),
+        })
+      );
+    } catch (_) {
+      // ignore
+    }
   }
 
   async function requestApi(url, options = {}, requiresAuth = false) {
@@ -419,6 +475,7 @@
       latestConfig = config;
       clearDirectoryPicker();
       fillConfigForm(config);
+      persistSiteBootCache(domain, config);
       const domainHint =
         matchedDomain && matchedDomain !== domain
           ? `（命中回退域名：${matchedDomain}）`
@@ -497,6 +554,7 @@
 
       latestConfig = payload.data.config;
       fillConfigForm(latestConfig);
+      persistSiteBootCache(domain, latestConfig);
       setStatus(`保存成功，当前存储：${payload.data.storageBackend}`, "success");
     } catch (error) {
       if (error.status === 401) {

@@ -57,6 +57,7 @@ class Gallery {
             setTimeout(() => this.handleUrlParams(), 0);
         });
 
+        this.applyCachedSiteBoot();
         this.remoteConfig = await this.fetchRemoteConfig();
         this.applyRemoteConfigToPage(this.remoteConfig);
         this.applyRemoteConfigToDataLoader(this.remoteConfig);
@@ -707,6 +708,46 @@ class Gallery {
         return '';
     }
 
+    getSiteBootCacheKey() {
+        return 'gallery-site-boot';
+    }
+
+    readSiteBootCache() {
+        try {
+            const raw = localStorage.getItem(this.getSiteBootCacheKey());
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch {
+            return null;
+        }
+    }
+
+    persistSiteBootCache(payload) {
+        try {
+            localStorage.setItem(this.getSiteBootCacheKey(), JSON.stringify(payload));
+        } catch {
+            // ignore storage failures
+        }
+    }
+
+    applyCachedSiteBoot() {
+        const cached = this.readSiteBootCache();
+        if (!cached) return;
+
+        const title = String(cached.title || '').trim();
+        const rawImageUrl = String(cached.imageUrl || '').trim();
+        const imageUrl = /^https?:\/\//i.test(rawImageUrl) || rawImageUrl.startsWith('data:') ? rawImageUrl : '';
+        if (!title && !imageUrl) return;
+
+        this.applyRemoteConfigToPage({
+            site: {
+                title,
+                imageUrl,
+            },
+        });
+    }
+
     resolveSiteImageUrl(imageUrlInput, remoteConfig) {
         let raw = String(imageUrlInput || '').trim();
         if (!raw) return '';
@@ -748,22 +789,22 @@ class Gallery {
         }
 
         const siteConfig = remoteConfig.site || {};
-        const title = String(siteConfig.title || '').trim();
-        if (title) {
-            document.title = title;
+        const configuredTitle = String(siteConfig.title || '').trim();
+        if (configuredTitle) {
+            document.title = configuredTitle;
             const headerTitleText = document.getElementById('site-title-text');
             if (headerTitleText) {
-                headerTitleText.textContent = title;
+                headerTitleText.textContent = configuredTitle;
             } else {
                 const headerTitle = document.querySelector('header h1 a');
                 if (headerTitle) {
-                    headerTitle.textContent = title;
+                    headerTitle.textContent = configuredTitle;
                 }
             }
             const headerTitleLink = document.querySelector('header h1 a');
             if (headerTitleLink) {
-                headerTitleLink.setAttribute('title', title);
-                headerTitleLink.setAttribute('aria-label', title);
+                headerTitleLink.setAttribute('title', configuredTitle);
+                headerTitleLink.setAttribute('aria-label', configuredTitle);
             }
         }
 
@@ -779,6 +820,13 @@ class Gallery {
                 logo.classList.add('site-logo-hidden');
             }
         }
+
+        const finalTitle = configuredTitle || String(document.title || '').trim();
+        this.persistSiteBootCache({
+            title: finalTitle,
+            imageUrl: resolvedImageUrl,
+            updatedAt: new Date().toISOString(),
+        });
 
         if (!resolvedImageUrl) return;
 
