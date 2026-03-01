@@ -234,46 +234,6 @@ class DataLoader {
         };
     }
 
-    // 构造随机图直出图片 URL（type=img），用于全屏首屏加速：少一次“先拿 URL 再拉图片”的往返。
-    buildRandomImageDirectUrl(options = {}) {
-        const source = this.getSourceInfo();
-        if (!source || !this.hasRandomApi()) {
-            return '';
-        }
-
-        const baseUrl = (source.base_url || window.location.origin).replace(/\/+$/, '');
-        const randomEndpoint = source.random_endpoint || `${baseUrl}/random`;
-        const randomUrl = this.toAbsoluteUrl(randomEndpoint, baseUrl);
-
-        try {
-            const urlObj = new URL(randomUrl);
-            urlObj.searchParams.set('type', 'img');
-            urlObj.searchParams.set('content', options.content || 'image');
-
-            const orientationInput =
-                options.orientation !== undefined
-                    ? options.orientation
-                    : this.getConfiguredRandomOrientation(source);
-            const preferredOrientation = this.normalizeRandomOrientation(orientationInput);
-            if (preferredOrientation) {
-                urlObj.searchParams.set('orientation', preferredOrientation);
-            }
-
-            const preferredDir = this.normalizeDirPath(options.dir || this.getConfiguredListDir(source));
-            if (preferredDir) {
-                urlObj.searchParams.set('dir', preferredDir);
-            }
-
-            if (options.cacheBust) {
-                urlObj.searchParams.set('_t', String(Date.now()));
-            }
-
-            return urlObj.toString();
-        } catch {
-            return '';
-        }
-    }
-
     // 设置索引地址
     setGalleryIndexUrl(url) {
         const normalized = String(url || '').trim();

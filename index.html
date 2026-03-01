@@ -34,6 +34,30 @@
     <noscript><title>Gallery-Portfolio</title></noscript>
     <script>
       (function () {
+        // 尽早 preconnect 到图床域名（来自本地缓存），减少 TLS 握手等待
+        try {
+          var raw = localStorage.getItem("gallery-imgbed-origin");
+          if (!raw) return;
+          var origin = String(raw || "").trim();
+          if (!origin || !/^https?:\\/\\//i.test(origin)) return;
+
+          var dns = document.createElement("link");
+          dns.rel = "dns-prefetch";
+          dns.href = origin;
+          document.head.appendChild(dns);
+
+          var pre = document.createElement("link");
+          pre.rel = "preconnect";
+          pre.href = origin;
+          pre.crossOrigin = "anonymous";
+          document.head.appendChild(pre);
+        } catch (_) {
+          // ignore
+        }
+      })();
+    </script>
+    <script>
+      (function () {
         try {
           const params = new URLSearchParams(window.location.search);
           const raw = String(params.get("fullscreen") || "").trim().toLowerCase();
@@ -192,7 +216,7 @@
     </div>
 
     <!-- 加载JavaScript模块 -->
-    <script src="public/data-loader.js?v=20260301-11" defer></script>
-    <script src="public/gallery.js?v=20260301-11" defer></script>
+    <script src="public/data-loader.js?v=20260302-1" defer></script>
+    <script src="public/gallery.js?v=20260302-1" defer></script>
   </body>
 </html> 
