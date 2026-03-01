@@ -8,10 +8,6 @@ class DataLoader {
         this.galleryDataApiUrl = options.galleryDataApiUrl || '/api/gallery-data';
         this.galleryDataMode = options.galleryDataMode || 'static';
         this.runtimeSourceConfig = null;
-        // 图片代理功能：通过本站 /api/img-proxy 中转图床图片，利用 Cloudflare Cache 加速
-        this.imgProxyEnabled = false;
-        this.imgProxyBaseUrl = '/api/img-proxy';
-        this.imgbedHost = '';
     }
 
     // 从本地JSON文件加载图片数据
@@ -98,13 +94,13 @@ class DataLoader {
     getImagesByCategory(category) {
         if (!this.galleryData || !this.galleryData.gallery) return [];
         const images = this.galleryData.gallery[category]?.images || [];
-        return this.shuffleImages(images).map(img => this.proxyImageData(img));
+        return this.shuffleImages(images);
     }
 
     // 获取所有图片（用于"全部"标签）
     getAllImages() {
         if (!this.galleryData || !this.galleryData.gallery) return [];
-
+        
         const allImages = [];
         const categories = Object.keys(this.galleryData.gallery);
 
@@ -112,10 +108,10 @@ class DataLoader {
         const shuffledCategories = this.shuffleEnabled
             ? [...categories].sort(() => Math.random() - 0.5)
             : [...categories];
-
+        
         // 使用Set去重
         const uniqueImageUrls = new Set();
-
+        
         shuffledCategories.forEach(category => {
             const images = this.galleryData.gallery[category].images || [];
             images.forEach(img => {
@@ -125,8 +121,8 @@ class DataLoader {
                 }
             });
         });
-
-        return this.shuffleImages(allImages).map(img => this.proxyImageData(img));
+        
+        return this.shuffleImages(allImages);
     }
 
     // 获取总图片数
@@ -228,12 +224,12 @@ class DataLoader {
 
         const imageUrl = this.normalizeImageUrl(rawUrl, source, baseUrl);
 
-        return this.proxyImageData({
+        return {
             name: 'random-image',
             original: imageUrl,
             preview: imageUrl,
             category: 'random',
-        });
+        };
     }
 
     // 设置索引地址
@@ -273,51 +269,6 @@ class DataLoader {
         });
 
         this.runtimeSourceConfig = Object.keys(normalized).length ? normalized : null;
-    }
-
-    // ——— 图片代理相关方法 ———
-
-    // 启用图片代理，传入图床 base URL 以提取域名
-    enableImgProxy(imgbedBaseUrl) {
-        if (!imgbedBaseUrl) return;
-        try {
-            const parsed = new URL(imgbedBaseUrl);
-            this.imgbedHost = parsed.host.toLowerCase();
-            this.imgProxyEnabled = true;
-            // 缓存图床 origin 供 preconnect 使用（即使走代理，也可能有直连场景）
-            try {
-                localStorage.setItem('gallery-imgbed-origin', parsed.origin);
-            } catch {
-                // ignore
-            }
-        } catch {
-            this.imgProxyEnabled = false;
-        }
-    }
-
-    // 将图床图片 URL 转为本站代理 URL
-    toProxiedUrl(imageUrl) {
-        if (!this.imgProxyEnabled || !imageUrl) return imageUrl;
-        // 仅代理指向图床域名的外部 URL
-        try {
-            const parsed = new URL(imageUrl, window.location.origin);
-            if (parsed.host.toLowerCase() !== this.imgbedHost) return imageUrl;
-            // 已经是相对路径或本站域名则不代理
-            if (parsed.origin === window.location.origin) return imageUrl;
-        } catch {
-            return imageUrl;
-        }
-        return `${this.imgProxyBaseUrl}?url=${encodeURIComponent(imageUrl)}`;
-    }
-
-    // 批量转换图片数据中的 URL
-    proxyImageData(imageItem) {
-        if (!this.imgProxyEnabled || !imageItem) return imageItem;
-        return {
-            ...imageItem,
-            original: this.toProxiedUrl(imageItem.original),
-            preview: this.toProxiedUrl(imageItem.preview),
-        };
     }
 
     shuffleImages(images) {
