@@ -227,6 +227,10 @@ class Gallery {
             loader.onload = () => {
                 imageElement.src = imageUrl;
                 imageElement.classList.add('single-image-ready');
+                if (imageElement === this.singleImageElement && this.singleImageStage) {
+                    const safeUrl = String(imageUrl).replace(/"/g, '\\"');
+                    this.singleImageStage.style.setProperty('--single-image-backdrop', `url("${safeUrl}")`);
+                }
                 resolve();
             };
             loader.onerror = () => {
@@ -254,6 +258,10 @@ class Gallery {
                 return;
             }
             this.singleImageElement.src = originalUrl;
+            if (this.singleImageStage) {
+                const safeUrl = String(originalUrl).replace(/"/g, '\\"');
+                this.singleImageStage.style.setProperty('--single-image-backdrop', `url("${safeUrl}")`);
+            }
         };
 
         loader.onerror = () => {
