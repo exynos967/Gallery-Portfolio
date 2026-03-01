@@ -122,6 +122,27 @@ class Gallery {
         this.setupFullscreenUploadUi();
         const stage = this.ensureSingleImageStage();
         this.singleImageElement?.classList.remove('single-image-ready');
+
+        // 全屏首屏加速：如果配置了随机图接口，直接让 ImgBed 返回图片（type=img）。
+        // 这样可以省掉“先请求随机图拿 URL，再请求图片”的一次往返。
+        // 注意：随机直出 URL 不适合用于 backdrop（会额外触发一次随机请求），这里禁用 backdrop。
+        if (this.dataLoader.hasRandomApi()) {
+            const directUrl = this.dataLoader.buildRandomImageDirectUrl();
+            if (directUrl && this.singleImageElement) {
+                try {
+                    await this.loadImageDirectToElement(this.singleImageElement, directUrl, {
+                        fetchPriority: 'high',
+                        skipBackdrop: true,
+                    });
+                    stage.classList.remove('empty');
+                    this.hideLoading();
+                    return;
+                } catch (error) {
+                    console.warn('全屏随机图直出失败，回退 URL 模式:', error);
+                }
+            }
+        }
+
         const imageData = await this.getSingleImageData();
 
         if (!imageData) {
@@ -248,6 +269,56 @@ class Gallery {
                 reject(new Error(`failed to load image: ${imageUrl}`));
             };
             loader.src = imageUrl;
+        });
+    }
+
+    loadImageDirectToElement(imageElement, imageUrl, options = {}) {
+        return new Promise((resolve, reject) => {
+            if (!imageUrl) {
+                reject(new Error('image url is empty'));
+                return;
+            }
+
+            imageElement.classList.remove('single-image-ready');
+
+            const cleanup = () => {
+                imageElement.onload = null;
+                imageElement.onerror = null;
+            };
+
+            imageElement.onload = () => {
+                cleanup();
+                imageElement.classList.add('single-image-ready');
+                if (imageElement === this.singleImageElement && this.singleImageStage) {
+                    if (options.skipBackdrop) {
+                        this.singleImageStage.style.setProperty('--single-image-backdrop', 'none');
+                    } else {
+                        const safeUrl = String(imageUrl).replace(/"/g, '\\"');
+                        this.singleImageStage.style.setProperty('--single-image-backdrop', `url("${safeUrl}")`);
+                    }
+                }
+                resolve();
+            };
+
+            imageElement.onerror = () => {
+                cleanup();
+                reject(new Error(`failed to load image: ${imageUrl}`));
+            };
+
+            try {
+                imageElement.decoding = 'async';
+            } catch {
+                // ignore unsupported browsers
+            }
+            try {
+                if (options.fetchPriority) {
+                    imageElement.fetchPriority = options.fetchPriority;
+                }
+            } catch {
+                // ignore unsupported browsers
+            }
+
+            imageElement.src = imageUrl;
         });
     }
 

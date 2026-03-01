@@ -171,7 +171,7 @@ class DataLoader {
         const randomUrl = this.toAbsoluteUrl(randomEndpoint, baseUrl);
 
         const urlObj = new URL(randomUrl);
-        // 优先拿到文件路径，再拼接预览图路径（0_preview），实现“先快后清晰”
+        // 获取文件路径（更小的响应体），再拼出图片 URL
         urlObj.searchParams.set('type', 'path');
         urlObj.searchParams.set('form', 'text');
         urlObj.searchParams.set('content', options.content || 'image');
@@ -225,14 +225,53 @@ class DataLoader {
         }
 
         const imageUrl = this.normalizeImageUrl(rawUrl, source, baseUrl);
-        const previewUrl = this.buildPreviewUrl(imageUrl, source, baseUrl);
 
         return {
             name: 'random-image',
             original: imageUrl,
-            preview: previewUrl || imageUrl,
+            preview: imageUrl,
             category: 'random',
         };
+    }
+
+    // 构造随机图直出图片 URL（type=img），用于全屏首屏加速：少一次“先拿 URL 再拉图片”的往返。
+    buildRandomImageDirectUrl(options = {}) {
+        const source = this.getSourceInfo();
+        if (!source || !this.hasRandomApi()) {
+            return '';
+        }
+
+        const baseUrl = (source.base_url || window.location.origin).replace(/\/+$/, '');
+        const randomEndpoint = source.random_endpoint || `${baseUrl}/random`;
+        const randomUrl = this.toAbsoluteUrl(randomEndpoint, baseUrl);
+
+        try {
+            const urlObj = new URL(randomUrl);
+            urlObj.searchParams.set('type', 'img');
+            urlObj.searchParams.set('content', options.content || 'image');
+
+            const orientationInput =
+                options.orientation !== undefined
+                    ? options.orientation
+                    : this.getConfiguredRandomOrientation(source);
+            const preferredOrientation = this.normalizeRandomOrientation(orientationInput);
+            if (preferredOrientation) {
+                urlObj.searchParams.set('orientation', preferredOrientation);
+            }
+
+            const preferredDir = this.normalizeDirPath(options.dir || this.getConfiguredListDir(source));
+            if (preferredDir) {
+                urlObj.searchParams.set('dir', preferredDir);
+            }
+
+            if (options.cacheBust) {
+                urlObj.searchParams.set('_t', String(Date.now()));
+            }
+
+            return urlObj.toString();
+        } catch {
+            return '';
+        }
     }
 
     // 设置索引地址
@@ -338,30 +377,6 @@ class DataLoader {
         } catch {
             return '';
         }
-    }
-
-    buildPreviewUrl(originalUrl, source, baseUrl) {
-        if (!originalUrl) return '';
-
-        const previewDir = this.normalizeDirPath(source?.preview_dir || source?.previewDir || '0_preview');
-        if (!previewDir) return '';
-
-        const fileRoutePrefix = source?.file_route_prefix || source?.fileRoutePrefix || '/file';
-        const relativePath = this.extractRelativePathFromImageUrl(originalUrl, fileRoutePrefix);
-        if (!relativePath) return '';
-
-        const listDir = this.normalizeDirPath(this.getConfiguredListDir(source));
-
-        let previewRelative = '';
-        if (listDir && (relativePath === listDir || relativePath.startsWith(`${listDir}/`))) {
-            const remainder = relativePath === listDir ? '' : relativePath.slice(listDir.length + 1);
-            previewRelative = remainder ? `${listDir}/${previewDir}/${remainder}` : `${listDir}/${previewDir}`;
-        } else {
-            previewRelative = `${previewDir}/${relativePath}`;
-        }
-
-        if (!previewRelative) return '';
-        return this.normalizeImageUrl(previewRelative, source, baseUrl);
     }
 
     applyConfiguredDirFilter(galleryData) {
