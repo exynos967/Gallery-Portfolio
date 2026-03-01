@@ -1,4 +1,11 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initLayout() {
+    // 全屏单图模式不需要主题按钮/页脚逻辑，避免浪费首屏性能
+    try {
+        if (document.documentElement.classList.contains('boot-fullscreen')) {
+            return;
+        }
+    } catch (e) {}
+
     const themeToggle = document.getElementById('theme-toggle');
     const themeIcon = document.getElementById('theme-icon');
 
@@ -57,6 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    if (!themeToggle || !themeIcon) {
+        return;
+    }
+
     themeToggle.addEventListener('click', () => {
         const isDark = document.body.classList.toggle('dark');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
@@ -105,4 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
         attributes: true,
         attributeFilter: ['src']
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLayout);
+} else {
+    initLayout();
+}

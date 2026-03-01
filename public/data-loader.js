@@ -171,7 +171,9 @@ class DataLoader {
         const randomUrl = this.toAbsoluteUrl(randomEndpoint, baseUrl);
 
         const urlObj = new URL(randomUrl);
-        urlObj.searchParams.set('type', 'url');
+        // 优先拿到文件路径，再拼接预览图路径（0_preview），实现“先快后清晰”
+        urlObj.searchParams.set('type', 'path');
+        urlObj.searchParams.set('form', 'text');
         urlObj.searchParams.set('content', options.content || 'image');
         const orientationInput =
             options.orientation !== undefined
@@ -223,11 +225,12 @@ class DataLoader {
         }
 
         const imageUrl = this.normalizeImageUrl(rawUrl, source, baseUrl);
+        const previewUrl = this.buildPreviewUrl(imageUrl, source, baseUrl);
 
         return {
             name: 'random-image',
             original: imageUrl,
-            preview: imageUrl,
+            preview: previewUrl || imageUrl,
             category: 'random',
         };
     }
@@ -335,6 +338,30 @@ class DataLoader {
         } catch {
             return '';
         }
+    }
+
+    buildPreviewUrl(originalUrl, source, baseUrl) {
+        if (!originalUrl) return '';
+
+        const previewDir = this.normalizeDirPath(source?.preview_dir || source?.previewDir || '0_preview');
+        if (!previewDir) return '';
+
+        const fileRoutePrefix = source?.file_route_prefix || source?.fileRoutePrefix || '/file';
+        const relativePath = this.extractRelativePathFromImageUrl(originalUrl, fileRoutePrefix);
+        if (!relativePath) return '';
+
+        const listDir = this.normalizeDirPath(this.getConfiguredListDir(source));
+
+        let previewRelative = '';
+        if (listDir && (relativePath === listDir || relativePath.startsWith(`${listDir}/`))) {
+            const remainder = relativePath === listDir ? '' : relativePath.slice(listDir.length + 1);
+            previewRelative = remainder ? `${listDir}/${previewDir}/${remainder}` : `${listDir}/${previewDir}`;
+        } else {
+            previewRelative = `${previewDir}/${relativePath}`;
+        }
+
+        if (!previewRelative) return '';
+        return this.normalizeImageUrl(previewRelative, source, baseUrl);
     }
 
     applyConfiguredDirFilter(galleryData) {

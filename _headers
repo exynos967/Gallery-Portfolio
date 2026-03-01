@@ -13,6 +13,15 @@
 /api/*
   Cache-Control: no-store
 
+/api/public-config
+  Cache-Control: public, max-age=60, s-maxage=60, stale-while-revalidate=300
+
+/api/gallery-data
+  Cache-Control: public, max-age=30, s-maxage=30, stale-while-revalidate=120
+
+/api/public-upload
+  Cache-Control: no-store
+
 /
   Cache-Control: public, max-age=0, must-revalidate
 

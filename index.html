@@ -45,6 +45,30 @@
         }
       })();
     </script>
+    <script>
+      (function () {
+        // 尽早并行拉取站点配置，缩短首屏等待时间（gallery.js 会复用该 Promise）
+        try {
+          if (window.__galleryPublicConfigPromise) return;
+          window.__galleryPublicConfigPromise = fetch("/api/public-config", {
+            method: "GET",
+            headers: { Accept: "application/json" },
+            credentials: "omit",
+          })
+            .then(function (response) {
+              if (!response || !response.ok) return null;
+              return response.json().catch(function () {
+                return null;
+              });
+            })
+            .catch(function () {
+              return null;
+            });
+        } catch (_) {
+          // ignore
+        }
+      })();
+    </script>
     <style>
       html.boot-fullscreen body {
         margin: 0;
@@ -168,11 +192,7 @@
     </div>
 
     <!-- 加载JavaScript模块 -->
-    <script src="public/data-loader.js?v=20260301-9"></script>
-    <script src="public/tag-filter.js?v=20260301-9"></script>
-    <script src="public/image-loader.js?v=20260301-9"></script>
-    <script src="public/auto-scroll.js?v=20260301-9"></script>
-    <script src="public/layout.js?v=20260301-9"></script>
-    <script src="public/gallery.js?v=20260301-9"></script>
+    <script src="public/data-loader.js?v=20260301-10" defer></script>
+    <script src="public/gallery.js?v=20260301-10" defer></script>
   </body>
 </html> 

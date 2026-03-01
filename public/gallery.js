@@ -58,7 +58,17 @@ class Gallery {
         });
 
         this.applyCachedSiteBoot();
-        this.remoteConfig = await this.fetchRemoteConfig();
+
+        // 远端配置缓存：首访仍会拉取，但后续访问可直接命中 localStorage，显著提升首屏速度。
+        const cachedConfig = this.readCachedRemoteConfig();
+        if (cachedConfig) {
+            this.remoteConfig = cachedConfig;
+            this.refreshRemoteConfigInBackground();
+        } else {
+            this.remoteConfig = await this.fetchRemoteConfig();
+            this.persistRemoteConfig(this.remoteConfig);
+        }
+
         this.applyRemoteConfigToPage(this.remoteConfig);
         this.applyRemoteConfigToDataLoader(this.remoteConfig);
         this.settings = this.getInitialSettings(this.remoteConfig);
@@ -79,6 +89,7 @@ class Gallery {
 
         await this.dataLoader.loadGalleryData();
 
+        await this.ensureWaterfallDependencies();
         this.autoScroll = new AutoScroll();
         this.initComponents();
         this.applyFullscreenMode(false);
@@ -686,6 +697,20 @@ class Gallery {
     }
 
     async fetchRemoteConfig() {
+        // index.html 里会尽早启动一次配置请求，这里优先复用，避免“等待网络”的空档。
+        if (window.__galleryPublicConfigPromise) {
+            try {
+                const promise = window.__galleryPublicConfigPromise;
+                window.__galleryPublicConfigPromise = null;
+                const payload = await promise;
+                if (payload?.config) {
+                    return payload.config;
+                }
+            } catch (error) {
+                console.warn('复用预取配置失败，改为直接请求:', error);
+            }
+        }
+
         try {
             const response = await fetch('/api/public-config', {
                 method: 'GET',
@@ -704,6 +729,55 @@ class Gallery {
             console.warn('获取远端配置失败，使用本地默认配置:', error);
             return null;
         }
+    }
+
+    // —— remoteConfig 缓存（localStorage）——
+
+    getRemoteConfigCacheKey() {
+        return 'gallery-remote-config';
+    }
+
+    readCachedRemoteConfig() {
+        try {
+            const raw = localStorage.getItem(this.getRemoteConfigCacheKey());
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            const cachedAt = Number(parsed._cachedAt || 0);
+            // 24 小时有效，过期则强制重新拉取（保证配置最终一致）
+            if (!cachedAt || Date.now() - cachedAt > 24 * 60 * 60 * 1000) {
+                return null;
+            }
+            return parsed.config || null;
+        } catch {
+            return null;
+        }
+    }
+
+    persistRemoteConfig(config) {
+        if (!config) return;
+        try {
+            localStorage.setItem(
+                this.getRemoteConfigCacheKey(),
+                JSON.stringify({ config, _cachedAt: Date.now() })
+            );
+        } catch {
+            // ignore
+        }
+    }
+
+    refreshRemoteConfigInBackground() {
+        this.fetchRemoteConfig()
+            .then((freshConfig) => {
+                if (!freshConfig) return;
+                this.persistRemoteConfig(freshConfig);
+                // 静默更新轻量 UI（标题、logo）
+                this.applyRemoteConfigToPage(freshConfig);
+                this.remoteConfig = freshConfig;
+            })
+            .catch(() => {
+                // ignore
+            });
     }
 
     guessImageMimeType(imageUrl) {
@@ -899,6 +973,69 @@ class Gallery {
         if (hasImgBedOverride) {
             this.dataLoader.setRuntimeSourceConfig(runtimeSource);
         }
+
+        // 记住图床 origin，供下次首屏 preconnect（减少 TLS 握手等待）
+        if (baseUrl) {
+            try {
+                const origin = new URL(baseUrl).origin;
+                localStorage.setItem('gallery-imgbed-origin', origin);
+            } catch {
+                // ignore invalid URL
+            }
+        }
+    }
+
+    async ensureWaterfallDependencies() {
+        if (window.TagFilter && window.ImageLoader && window.AutoScroll) {
+            return;
+        }
+
+        // 从当前 gallery.js 的 ?v= 自动推导资源版本，避免版本不一致导致缓存命中异常。
+        const version = this.detectAssetVersion();
+        const withVersion = (path) => (version ? `${path}?v=${encodeURIComponent(version)}` : path);
+
+        await this.loadScriptOnce(withVersion('public/tag-filter.js'));
+        await this.loadScriptOnce(withVersion('public/image-loader.js'));
+        await this.loadScriptOnce(withVersion('public/auto-scroll.js'));
+        await this.loadScriptOnce(withVersion('public/layout.js'));
+    }
+
+    detectAssetVersion() {
+        try {
+            const scripts = document.querySelectorAll('script[src]');
+            for (const script of scripts) {
+                const src = String(script.getAttribute('src') || '');
+                if (!src.includes('public/gallery.js')) continue;
+                const url = new URL(src, window.location.origin);
+                const v = url.searchParams.get('v');
+                if (v) return v;
+            }
+        } catch {
+            // ignore
+        }
+        return '';
+    }
+
+    loadScriptOnce(src) {
+        if (!src) return Promise.resolve();
+
+        if (!this._scriptLoaders) {
+            this._scriptLoaders = new Map();
+        }
+        const existing = this._scriptLoaders.get(src);
+        if (existing) return existing;
+
+        const promise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error(`failed to load script: ${src}`));
+            document.head.appendChild(script);
+        });
+
+        this._scriptLoaders.set(src, promise);
+        return promise;
     }
 }
 
