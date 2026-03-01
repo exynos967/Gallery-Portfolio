@@ -33,6 +33,30 @@
     </script>
     <noscript><title>Gallery-Portfolio</title></noscript>
     <script>
+      // 从 localStorage 读取图床域名，提前建立连接以加速图片加载
+      (function () {
+        try {
+          var raw = localStorage.getItem("gallery-imgbed-origin");
+          if (raw) {
+            var origin = String(raw).trim();
+            if (/^https?:\/\//i.test(origin)) {
+              var dns = document.createElement("link");
+              dns.rel = "dns-prefetch";
+              dns.href = origin;
+              document.head.appendChild(dns);
+              var pc = document.createElement("link");
+              pc.rel = "preconnect";
+              pc.href = origin;
+              pc.crossOrigin = "";
+              document.head.appendChild(pc);
+            }
+          }
+        } catch (_) {
+          // ignore
+        }
+      })();
+    </script>
+    <script>
       (function () {
         try {
           const params = new URLSearchParams(window.location.search);

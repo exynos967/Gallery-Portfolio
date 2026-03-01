@@ -58,7 +58,20 @@ class Gallery {
         });
 
         this.applyCachedSiteBoot();
-        this.remoteConfig = await this.fetchRemoteConfig();
+
+        // —— 方案 A+B: config 缓存 + 请求并行化 ——
+        // 有缓存时用缓存立即初始化，config 后台刷新不阻塞首屏；
+        // 无缓存时（首次访问）走串行等待，确保正确性。
+        const cachedConfig = this.readCachedRemoteConfig();
+
+        if (cachedConfig) {
+            this.remoteConfig = cachedConfig;
+            this.refreshRemoteConfigInBackground();
+        } else {
+            this.remoteConfig = await this.fetchRemoteConfig();
+            this.persistRemoteConfig(this.remoteConfig);
+        }
+
         this.applyRemoteConfigToPage(this.remoteConfig);
         this.applyRemoteConfigToDataLoader(this.remoteConfig);
         this.settings = this.getInitialSettings(this.remoteConfig);
@@ -706,6 +719,55 @@ class Gallery {
         }
     }
 
+    // —— 方案 A: remoteConfig 缓存读写 ——
+
+    getRemoteConfigCacheKey() {
+        return 'gallery-remote-config';
+    }
+
+    readCachedRemoteConfig() {
+        try {
+            const raw = localStorage.getItem(this.getRemoteConfigCacheKey());
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            // 缓存有效期 24 小时，超期视为失效（降级为串行请求）
+            const cachedAt = parsed._cachedAt || 0;
+            if (Date.now() - cachedAt > 24 * 60 * 60 * 1000) return null;
+            return parsed.config || null;
+        } catch {
+            return null;
+        }
+    }
+
+    persistRemoteConfig(config) {
+        if (!config) return;
+        try {
+            localStorage.setItem(
+                this.getRemoteConfigCacheKey(),
+                JSON.stringify({ config, _cachedAt: Date.now() })
+            );
+        } catch {
+            // ignore storage failures
+        }
+    }
+
+    // —— 方案 B: 后台静默刷新 config ——
+
+    refreshRemoteConfigInBackground() {
+        this.fetchRemoteConfig()
+            .then((freshConfig) => {
+                if (!freshConfig) return;
+                this.persistRemoteConfig(freshConfig);
+                // 静默更新页面轻量级 UI（标题、Logo）
+                this.applyRemoteConfigToPage(freshConfig);
+                this.remoteConfig = freshConfig;
+            })
+            .catch(() => {
+                // 后台刷新失败不影响已显示的页面
+            });
+    }
+
     guessImageMimeType(imageUrl) {
         const clean = String(imageUrl || '').split('#')[0].split('?')[0].toLowerCase();
         if (clean.endsWith('.svg')) return 'image/svg+xml';
@@ -898,6 +960,14 @@ class Gallery {
 
         if (hasImgBedOverride) {
             this.dataLoader.setRuntimeSourceConfig(runtimeSource);
+        }
+
+        // 若配置了图床地址，启用图片代理以利用 Cloudflare Cache 加速
+        const imgbedBaseUrl = String(
+            imgbedConfig.baseUrl || imgbedConfig.base_url || ''
+        ).trim();
+        if (imgbedBaseUrl) {
+            this.dataLoader.enableImgProxy(imgbedBaseUrl);
         }
     }
 }
