@@ -58,6 +58,7 @@ class Gallery {
         });
 
         this.remoteConfig = await this.fetchRemoteConfig();
+        this.applyRemoteConfigToPage(this.remoteConfig);
         this.applyRemoteConfigToDataLoader(this.remoteConfig);
         this.settings = this.getInitialSettings(this.remoteConfig);
         this.uploadSettings = this.getUploadSettings(this.remoteConfig);
@@ -694,6 +695,57 @@ class Gallery {
             console.warn('获取远端配置失败，使用本地默认配置:', error);
             return null;
         }
+    }
+
+    guessImageMimeType(imageUrl) {
+        const clean = String(imageUrl || '').split('#')[0].split('?')[0].toLowerCase();
+        if (clean.endsWith('.svg')) return 'image/svg+xml';
+        if (clean.endsWith('.png')) return 'image/png';
+        if (clean.endsWith('.jpg') || clean.endsWith('.jpeg')) return 'image/jpeg';
+        if (clean.endsWith('.webp')) return 'image/webp';
+        if (clean.endsWith('.ico')) return 'image/x-icon';
+        return '';
+    }
+
+    applyRemoteConfigToPage(remoteConfig) {
+        if (!remoteConfig || typeof remoteConfig !== 'object') {
+            return;
+        }
+
+        const siteConfig = remoteConfig.site || {};
+        const title = String(siteConfig.title || '').trim();
+        if (title) {
+            document.title = title;
+            const headerTitle = document.querySelector('header h1 a');
+            if (headerTitle) {
+                headerTitle.textContent = title;
+                headerTitle.setAttribute('title', title);
+                headerTitle.setAttribute('aria-label', title);
+            }
+        }
+
+        const imageUrl = String(siteConfig.imageUrl || '').trim();
+        if (!imageUrl) return;
+
+        const type = this.guessImageMimeType(imageUrl);
+        const existingIcon = document.querySelector('link[rel~="icon"]');
+        if (existingIcon) {
+            existingIcon.setAttribute('href', imageUrl);
+            if (type) {
+                existingIcon.setAttribute('type', type);
+            } else {
+                existingIcon.removeAttribute('type');
+            }
+            return;
+        }
+
+        const icon = document.createElement('link');
+        icon.rel = 'icon';
+        icon.href = imageUrl;
+        if (type) {
+            icon.type = type;
+        }
+        document.head.appendChild(icon);
     }
 
     applyRemoteConfigToDataLoader(remoteConfig) {

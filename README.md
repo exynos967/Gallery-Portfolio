@@ -130,6 +130,9 @@ admin / admin
   - `waterfall`：多图瀑布流展示，保留筛选与交互按钮
 - 默认随机排序：开/关
 - `gallery-index.json` 自定义地址
+- 页面信息：
+  - 网页标题 `site.title`
+  - 网页图片 `site.imageUrl`（favicon/分享封面，可选）
 - ImgBed API 参数：
   - 基础域名 `baseUrl`
   - 私有令牌 `apiToken`（仅管理端保存，不在 public-config 暴露）
@@ -187,6 +190,8 @@ DEFAULT_GALLERY_DATA_MODE=static
 DEFAULT_DISPLAY_MODE=fullscreen
 DEFAULT_SHUFFLE_ENABLED=true
 DEFAULT_GALLERY_INDEX_URL=
+DEFAULT_SITE_TITLE=Gallery-Portfolio
+DEFAULT_SITE_IMAGE_URL=
 DEFAULT_IMGBED_BASE_URL=
 DEFAULT_IMGBED_API_TOKEN=
 DEFAULT_IMGBED_LIST_ENDPOINT=/api/manage/list
@@ -229,6 +234,8 @@ DEFAULT_DISPLAY_MODE
 DEFAULT_SHUFFLE_ENABLED
 DEFAULT_GALLERY_DATA_MODE
 DEFAULT_GALLERY_INDEX_URL
+DEFAULT_SITE_TITLE
+DEFAULT_SITE_IMAGE_URL
 DEFAULT_IMGBED_BASE_URL
 DEFAULT_IMGBED_API_TOKEN
 DEFAULT_IMGBED_LIST_ENDPOINT

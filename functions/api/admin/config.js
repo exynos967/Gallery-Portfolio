@@ -3,6 +3,8 @@ import { getDomainConfig, saveDomainConfig } from "../../_lib/config-store.js";
 import { json, noContent, normalizeDomain, pickRequestDomain, readJson } from "../../_lib/http.js";
 
 const VALID_RANDOM_ORIENTATIONS = new Set(["", "auto", "landscape", "portrait", "square"]);
+const MAX_SITE_TITLE_LENGTH = 80;
+const MAX_SITE_IMAGE_URL_LENGTH = 2048;
 
 function normalizeRandomOrientation(input) {
   const normalized = String(input || "").trim().toLowerCase();
@@ -16,6 +18,8 @@ function sanitizeInputConfig(config) {
   const galleryDataMode =
     String(config?.galleryDataMode || "").toLowerCase() === "imgbed-api" ? "imgbed-api" : "static";
   const galleryIndexUrl = String(config?.galleryIndexUrl || "").trim();
+  const siteTitle = String(config?.site?.title || "").trim();
+  const siteImageUrl = String(config?.site?.imageUrl || "").trim();
   const pageSize = Number(config?.imgbed?.pageSize);
   const publicUploadDescription = String(config?.publicUpload?.description || "").trim();
   const publicUploadModalTitle = String(config?.publicUpload?.modalTitle || "").trim();
@@ -26,6 +30,10 @@ function sanitizeInputConfig(config) {
     shuffleEnabled,
     galleryDataMode,
     galleryIndexUrl,
+    site: {
+      title: siteTitle.slice(0, MAX_SITE_TITLE_LENGTH),
+      imageUrl: siteImageUrl.slice(0, MAX_SITE_IMAGE_URL_LENGTH),
+    },
     imgbed: {
       baseUrl: String(config?.imgbed?.baseUrl || "").trim(),
       listEndpoint: String(config?.imgbed?.listEndpoint || "").trim(),

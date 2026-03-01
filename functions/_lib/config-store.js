@@ -5,10 +5,14 @@ const D1_TABLE_NAME = "gallery_admin_config";
 const MAX_IMGBED_PAGE_SIZE = 500;
 const MAX_UPLOAD_TEXT_LENGTH = 500;
 const VALID_RANDOM_ORIENTATIONS = new Set(["", "auto", "landscape", "portrait", "square"]);
+const MAX_SITE_TITLE_LENGTH = 80;
+const MAX_SITE_IMAGE_URL_LENGTH = 2048;
 
 const DEFAULT_UPLOAD_MODAL_TITLE = "上传图片";
 const DEFAULT_UPLOAD_BUTTON_TEXT = "上传图片";
 const DEFAULT_UPLOAD_DESCRIPTION = "请填写图片描述并选择图片后上传。";
+const DEFAULT_SITE_TITLE = "Gallery-Portfolio";
+const DEFAULT_SITE_IMAGE_URL = "";
 
 function parseBoolean(input, fallbackValue) {
   if (input === undefined || input === null || input === "") return fallbackValue;
@@ -111,6 +115,13 @@ function normalizePublicUploadConfig(publicUploadConfig = {}, fallbackPublicUplo
   };
 }
 
+function normalizeSiteConfig(siteConfig = {}, fallbackSite = {}) {
+  return {
+    title: normalizeText(siteConfig.title, fallbackSite.title || DEFAULT_SITE_TITLE, MAX_SITE_TITLE_LENGTH),
+    imageUrl: normalizeText(siteConfig.imageUrl, fallbackSite.imageUrl || DEFAULT_SITE_IMAGE_URL, MAX_SITE_IMAGE_URL_LENGTH),
+  };
+}
+
 function toStoredConfig(domain, config, nowIso) {
   return {
     domain,
@@ -118,6 +129,7 @@ function toStoredConfig(domain, config, nowIso) {
     shuffleEnabled: parseBoolean(config.shuffleEnabled, true),
     galleryDataMode: String(config.galleryDataMode || "static").toLowerCase() === "imgbed-api" ? "imgbed-api" : "static",
     galleryIndexUrl: String(config.galleryIndexUrl || "").trim(),
+    site: normalizeSiteConfig(config.site),
     imgbed: normalizeImgbedConfig(config.imgbed),
     publicUpload: normalizePublicUploadConfig(config.publicUpload),
     updatedAt: nowIso,
@@ -131,6 +143,16 @@ function makeDefaultConfig(env) {
     galleryDataMode:
       String(env.DEFAULT_GALLERY_DATA_MODE || "static").toLowerCase() === "imgbed-api" ? "imgbed-api" : "static",
     galleryIndexUrl: String(env.DEFAULT_GALLERY_INDEX_URL || "").trim(),
+    site: normalizeSiteConfig(
+      {
+        title: env.DEFAULT_SITE_TITLE,
+        imageUrl: env.DEFAULT_SITE_IMAGE_URL,
+      },
+      {
+        title: DEFAULT_SITE_TITLE,
+        imageUrl: DEFAULT_SITE_IMAGE_URL,
+      }
+    ),
     imgbed: normalizeImgbedConfig(
       {
         baseUrl: env.DEFAULT_IMGBED_BASE_URL,
@@ -229,6 +251,7 @@ export async function getDomainConfig(env, domain) {
   const merged = {
     ...defaults,
     ...(stored || {}),
+    site: normalizeSiteConfig(stored?.site, defaults.site),
     imgbed: normalizeImgbedConfig(stored?.imgbed, defaults.imgbed),
     publicUpload: normalizePublicUploadConfig(stored?.publicUpload, defaults.publicUpload),
   };
@@ -276,6 +299,10 @@ export function toPublicConfig(config = {}) {
     shuffleEnabled: parseBoolean(config.shuffleEnabled, true),
     galleryDataMode: String(config.galleryDataMode || "static").toLowerCase() === "imgbed-api" ? "imgbed-api" : "static",
     galleryIndexUrl: String(config.galleryIndexUrl || "").trim(),
+    site: normalizeSiteConfig(config.site, {
+      title: DEFAULT_SITE_TITLE,
+      imageUrl: DEFAULT_SITE_IMAGE_URL,
+    }),
     imgbed: {
       baseUrl: String(config.imgbed?.baseUrl || "").trim(),
       listEndpoint: String(config.imgbed?.listEndpoint || "").trim(),

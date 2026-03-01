@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gallery Admin</title>
-    <link rel="stylesheet" href="admin.css?v=20260301-2" />
+    <link rel="stylesheet" href="admin.css?v=20260301-4" />
   </head>
   <body>
     <main class="admin-shell">
@@ -70,6 +70,24 @@
                 name="gallery-index-url"
                 type="url"
                 placeholder="例如：https://example.com/gallery-index.json"
+              />
+            </div>
+          </div>
+
+          <h3>页面信息</h3>
+          <div class="form-grid">
+            <div class="field full-width">
+              <label for="site-title">网页标题</label>
+              <input id="site-title" name="site-title" type="text" placeholder="例如：我的画廊" />
+            </div>
+
+            <div class="field full-width">
+              <label for="site-image-url">网页图片（favicon/分享封面，可选）</label>
+              <input
+                id="site-image-url"
+                name="site-image-url"
+                type="url"
+                placeholder="例如：https://img.example.com/file/logo.png"
               />
             </div>
           </div>
@@ -208,6 +226,6 @@
       </section>
     </main>
 
-    <script src="admin.js?v=20260301-2"></script>
+    <script src="admin.js?v=20260301-4"></script>
   </body>
 </html>

@@ -32,6 +32,8 @@
   const displayModeInput = document.getElementById("display-mode");
   const shuffleEnabledInput = document.getElementById("shuffle-enabled");
   const galleryIndexUrlInput = document.getElementById("gallery-index-url");
+  const siteTitleInput = document.getElementById("site-title");
+  const siteImageUrlInput = document.getElementById("site-image-url");
   const imgbedBaseUrlInput = document.getElementById("imgbed-base-url");
   const imgbedApiTokenInput = document.getElementById("imgbed-api-token");
   const imgbedListEndpointInput = document.getElementById("imgbed-list-endpoint");
@@ -296,17 +298,21 @@
     domainInput.focus();
   }
 
-  function collectConfigFromForm() {
-    const pageSize = Number(imgbedPageSizeInput.value);
-    return {
-      galleryDataMode: galleryDataModeInput.value || "static",
-      displayMode: displayModeInput.value || "fullscreen",
-      shuffleEnabled: Boolean(shuffleEnabledInput.checked),
-      galleryIndexUrl: galleryIndexUrlInput.value.trim(),
-      imgbed: {
-        baseUrl: imgbedBaseUrlInput.value.trim(),
-        apiToken: imgbedApiTokenInput.value.trim(),
-        listEndpoint: imgbedListEndpointInput.value.trim(),
+	  function collectConfigFromForm() {
+	    const pageSize = Number(imgbedPageSizeInput.value);
+	    return {
+	      galleryDataMode: galleryDataModeInput.value || "static",
+	      displayMode: displayModeInput.value || "fullscreen",
+	      shuffleEnabled: Boolean(shuffleEnabledInput.checked),
+	      galleryIndexUrl: galleryIndexUrlInput.value.trim(),
+	      site: {
+	        title: siteTitleInput?.value.trim(),
+	        imageUrl: siteImageUrlInput?.value.trim(),
+	      },
+	      imgbed: {
+	        baseUrl: imgbedBaseUrlInput.value.trim(),
+	        apiToken: imgbedApiTokenInput.value.trim(),
+	        listEndpoint: imgbedListEndpointInput.value.trim(),
         randomEndpoint: imgbedRandomEndpointInput.value.trim(),
         randomOrientation: (imgbedRandomOrientationInput?.value || "").trim(),
         fileRoutePrefix: imgbedFilePrefixInput.value.trim() || "/file",
@@ -324,15 +330,21 @@
     };
   }
 
-  function fillConfigForm(config) {
-    const safe = config || {};
-    galleryDataModeInput.value = safe.galleryDataMode === "imgbed-api" ? "imgbed-api" : "static";
-    displayModeInput.value = safe.displayMode === "waterfall" ? "waterfall" : "fullscreen";
-    shuffleEnabledInput.checked = safe.shuffleEnabled !== false;
-    galleryIndexUrlInput.value = safe.galleryIndexUrl || "";
-    imgbedBaseUrlInput.value = safe.imgbed?.baseUrl || "";
-    imgbedApiTokenInput.value = safe.imgbed?.apiToken || "";
-    imgbedListEndpointInput.value = safe.imgbed?.listEndpoint || "";
+	  function fillConfigForm(config) {
+	    const safe = config || {};
+	    galleryDataModeInput.value = safe.galleryDataMode === "imgbed-api" ? "imgbed-api" : "static";
+	    displayModeInput.value = safe.displayMode === "waterfall" ? "waterfall" : "fullscreen";
+	    shuffleEnabledInput.checked = safe.shuffleEnabled !== false;
+	    galleryIndexUrlInput.value = safe.galleryIndexUrl || "";
+	    if (siteTitleInput) {
+	      siteTitleInput.value = safe.site?.title || "";
+	    }
+	    if (siteImageUrlInput) {
+	      siteImageUrlInput.value = safe.site?.imageUrl || "";
+	    }
+	    imgbedBaseUrlInput.value = safe.imgbed?.baseUrl || "";
+	    imgbedApiTokenInput.value = safe.imgbed?.apiToken || "";
+	    imgbedListEndpointInput.value = safe.imgbed?.listEndpoint || "";
     imgbedRandomEndpointInput.value = safe.imgbed?.randomEndpoint || "";
     if (imgbedRandomOrientationInput) {
       const savedOrientation = String(safe.imgbed?.randomOrientation || "").trim().toLowerCase();
@@ -363,15 +375,19 @@
       return;
     }
     clearDirectoryPicker();
-    fillConfigForm({
-      galleryDataMode: "static",
-      displayMode: "fullscreen",
-      shuffleEnabled: true,
-      galleryIndexUrl: "",
-      imgbed: {
-        baseUrl: "",
-        apiToken: "",
-        listEndpoint: "/api/manage/list",
+	    fillConfigForm({
+	      galleryDataMode: "static",
+	      displayMode: "fullscreen",
+	      shuffleEnabled: true,
+	      galleryIndexUrl: "",
+	      site: {
+	        title: "Gallery-Portfolio",
+	        imageUrl: "",
+	      },
+	      imgbed: {
+	        baseUrl: "",
+	        apiToken: "",
+	        listEndpoint: "/api/manage/list",
         randomEndpoint: "/random",
         randomOrientation: "",
         fileRoutePrefix: "/file",
