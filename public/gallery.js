@@ -41,6 +41,7 @@ class Gallery {
         this.uploadSubmitBtn = document.getElementById('upload-submit-btn');
         this.uploadCancelBtn = document.getElementById('upload-cancel-btn');
         this.uploadUiInitialized = false;
+        this.uploadSelectedFiles = [];
 
         document.body.classList.add('app-booting');
 
@@ -380,27 +381,27 @@ class Gallery {
 
         if (this.uploadFileInput) {
             this.uploadFileInput.addEventListener('change', () => {
-                const file = this.uploadFileInput.files?.[0];
+                const files = Array.from(this.uploadFileInput.files || []);
+                this.uploadSelectedFiles = files;
 
-                // 前端先做一次图片类型校验，避免用户选错文件后还要等上传报错。
-                if (file && !String(file.type || '').toLowerCase().startsWith('image/')) {
-                    this.setUploadStatus('仅支持上传图片文件。', 'error');
-                    this.uploadFileInput.value = '';
-                    if (this.uploadDropzone) {
-                        this.uploadDropzone.classList.remove('has-file');
-                    }
-                    if (this.uploadFileNameElement) {
-                        this.uploadFileNameElement.textContent = '';
-                    }
+                if (!files.length) {
+                    this.renderSelectedUploadFiles();
                     return;
                 }
 
-                if (this.uploadDropzone) {
-                    this.uploadDropzone.classList.toggle('has-file', Boolean(file));
+                // 前端先做图片类型校验，避免用户选错文件后还要等上传报错。
+                const invalidFiles = files.filter(
+                    (item) => !String(item?.type || '').toLowerCase().startsWith('image/')
+                );
+                if (invalidFiles.length) {
+                    this.setUploadStatus('仅支持上传图片文件，已清空选择。', 'error');
+                    this.uploadSelectedFiles = [];
+                    this.uploadFileInput.value = '';
+                    this.renderSelectedUploadFiles();
+                    return;
                 }
-                if (this.uploadFileNameElement) {
-                    this.uploadFileNameElement.textContent = file ? file.name : '';
-                }
+
+                this.renderSelectedUploadFiles();
             });
         }
 
@@ -461,6 +462,33 @@ class Gallery {
         }
     }
 
+    renderSelectedUploadFiles() {
+        const files = Array.isArray(this.uploadSelectedFiles) ? this.uploadSelectedFiles : [];
+        const hasFiles = files.length > 0;
+
+        if (this.uploadDropzone) {
+            this.uploadDropzone.classList.toggle('has-file', hasFiles);
+        }
+
+        if (!this.uploadFileNameElement) return;
+        if (!hasFiles) {
+            this.uploadFileNameElement.textContent = '';
+            return;
+        }
+
+        if (files.length === 1) {
+            this.uploadFileNameElement.textContent = files[0]?.name || '';
+            return;
+        }
+
+        const names = files
+            .slice(0, 3)
+            .map((item) => item?.name)
+            .filter(Boolean);
+        const suffix = files.length > 3 ? ' 等' : '';
+        this.uploadFileNameElement.textContent = `已选择 ${files.length} 张：${names.join('，')}${suffix}`;
+    }
+
     openUploadModal() {
         if (!this.uploadModal) return;
         if (this.uploadTargetDirElement) {
@@ -477,12 +505,8 @@ class Gallery {
         if (this.uploadForm) {
             this.uploadForm.reset();
         }
-        if (this.uploadDropzone) {
-            this.uploadDropzone.classList.remove('has-file');
-        }
-        if (this.uploadFileNameElement) {
-            this.uploadFileNameElement.textContent = '';
-        }
+        this.uploadSelectedFiles = [];
+        this.renderSelectedUploadFiles();
         this.setUploadStatus('', 'info');
     }
 
@@ -493,41 +517,106 @@ class Gallery {
     }
 
     async handleUploadSubmit() {
-        const file = this.uploadFileInput?.files?.[0];
+        const files = (this.uploadSelectedFiles && this.uploadSelectedFiles.length)
+            ? this.uploadSelectedFiles
+            : Array.from(this.uploadFileInput?.files || []);
 
-        if (!file) {
-            this.setUploadStatus('请先选择一张图片。', 'error');
+        if (!files.length) {
+            this.setUploadStatus('请先选择图片。', 'error');
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file, file.name);
-
         if (this.uploadSubmitBtn) {
             this.uploadSubmitBtn.disabled = true;
-            this.uploadSubmitBtn.textContent = '上传中...';
+            this.uploadSubmitBtn.textContent = files.length > 1 ? `上传中 1/${files.length}` : '上传中...';
         }
         this.setUploadStatus('正在上传，请稍候...', 'info');
 
+        const successUrls = [];
+        const failures = [];
+
         try {
-            const response = await fetch('/api/public-upload', {
-                method: 'POST',
-                body: formData,
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok || payload?.success === false) {
-                throw new Error(payload?.message || `上传失败（HTTP ${response.status}）`);
+            for (let index = 0; index < files.length; index += 1) {
+                const file = files[index];
+
+                if (this.uploadSubmitBtn) {
+                    this.uploadSubmitBtn.textContent =
+                        files.length > 1 ? `上传中 ${index + 1}/${files.length}` : '上传中...';
+                }
+                this.setUploadStatus(
+                    files.length > 1
+                        ? `正在上传（${index + 1}/${files.length}）：${file.name}`
+                        : '正在上传，请稍候...',
+                    'info'
+                );
+
+                const formData = new FormData();
+                formData.append('file', file, file.name);
+
+                try {
+                    const response = await fetch('/api/public-upload', {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok || payload?.success === false) {
+                        throw new Error(payload?.message || `上传失败（HTTP ${response.status}）`);
+                    }
+
+                    const uploadedUrl = payload?.data?.url || '';
+                    if (!uploadedUrl) {
+                        throw new Error('上传成功但未返回图片地址');
+                    }
+
+                    successUrls.push(uploadedUrl);
+                } catch (error) {
+                    failures.push({
+                        file,
+                        name: file?.name || `第 ${index + 1} 张`,
+                        message: error?.message || String(error),
+                    });
+                }
             }
 
-            const uploadedUrl = payload?.data?.url || '';
-            if (uploadedUrl && this.singleImageElement) {
-                this.singleImageElement.src = uploadedUrl;
+            const lastUrl = successUrls[successUrls.length - 1] || '';
+            if (lastUrl && this.singleImageElement) {
+                this.singleImageElement.src = lastUrl;
             }
 
-            this.setUploadStatus('上传成功，感谢你的投稿。', 'success');
-            setTimeout(() => {
-                this.closeUploadModal();
-            }, 900);
+            if (!failures.length) {
+                this.setUploadStatus(
+                    files.length > 1 ? `上传成功：${successUrls.length} 张。` : '上传成功，感谢你的投稿。',
+                    'success'
+                );
+                setTimeout(() => {
+                    this.closeUploadModal();
+                }, 900);
+            } else if (!successUrls.length) {
+                const first = failures[0];
+                const extra = failures.length > 1 ? `（另有 ${failures.length - 1} 张失败）` : '';
+                this.setUploadStatus(`上传失败：${first?.name} - ${first?.message}${extra}`, 'error');
+                this.uploadSelectedFiles = failures.map((item) => item.file).filter(Boolean);
+                if (this.uploadFileInput) {
+                    this.uploadFileInput.value = '';
+                }
+                this.renderSelectedUploadFiles();
+            } else {
+                const names = failures
+                    .slice(0, 2)
+                    .map((item) => item.name)
+                    .filter(Boolean)
+                    .join('，');
+                const extra = failures.length > 2 ? ` 等` : '';
+                this.setUploadStatus(
+                    `上传完成：成功 ${successUrls.length} 张，失败 ${failures.length} 张（${names}${extra}）。`,
+                    'error'
+                );
+                this.uploadSelectedFiles = failures.map((item) => item.file).filter(Boolean);
+                if (this.uploadFileInput) {
+                    this.uploadFileInput.value = '';
+                }
+                this.renderSelectedUploadFiles();
+            }
         } catch (error) {
             this.setUploadStatus(`上传失败：${error.message}`, 'error');
         } finally {
