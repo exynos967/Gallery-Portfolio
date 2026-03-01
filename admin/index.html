@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gallery Admin</title>
-    <link rel="stylesheet" href="admin.css?v=20260301-4" />
+    <link rel="stylesheet" href="admin.css?v=20260301-5" />
   </head>
   <body>
     <main class="admin-shell">
@@ -82,12 +82,13 @@
             </div>
 
             <div class="field full-width">
-              <label for="site-image-url">网页图片（favicon/分享封面，可选）</label>
+              <label for="site-image-url">网页图片路径（ImgBed 文件路径，可选）</label>
               <input
                 id="site-image-url"
                 name="site-image-url"
-                type="url"
-                placeholder="例如：https://img.example.com/file/logo.png"
+                type="text"
+                spellcheck="false"
+                placeholder="例如：logo.png 或 folder/logo.webp（会自动拼成 ImgBed URL）"
               />
             </div>
           </div>
@@ -226,6 +227,6 @@
       </section>
     </main>
 
-    <script src="admin.js?v=20260301-4"></script>
+    <script src="admin.js?v=20260301-5"></script>
   </body>
 </html>

@@ -31,14 +31,30 @@
         display: none !important;
       }
     </style>
-    <link rel="stylesheet" href="public/styles.css?v=20260301-4" />
-    <link rel="stylesheet" href="public/gallery.css?v=20260301-4" />
+    <link rel="stylesheet" href="public/styles.css?v=20260301-6" />
+    <link rel="stylesheet" href="public/gallery.css?v=20260301-5" />
     <link rel="icon" href="public/assets/favicon.svg" type="image/svg+xml" />
   </head>
   <body class="app-booting">
     <header>
       <h1>
-        <a href="/" style="text-decoration: none; color: inherit;">Gallery-Portfolio</a>
+        <a
+          href="/"
+          class="site-title-link"
+          aria-label="Gallery-Portfolio"
+          title="Gallery-Portfolio"
+        >
+          <img
+            id="site-logo"
+            class="site-logo site-logo-hidden"
+            alt=""
+            width="24"
+            height="24"
+            decoding="async"
+            loading="lazy"
+          />
+          <span id="site-title-text">Gallery-Portfolio</span>
+        </a>
       </h1>
       <div class="header-buttons">
         <button id="shuffle-toggle" class="header-action-btn" aria-label="随机排序开关">
@@ -124,11 +140,11 @@
     </div>
 
     <!-- 加载JavaScript模块 -->
-    <script src="public/data-loader.js?v=20260301-4"></script>
-    <script src="public/tag-filter.js?v=20260301-4"></script>
-    <script src="public/image-loader.js?v=20260301-4"></script>
-    <script src="public/auto-scroll.js?v=20260301-4"></script>
-    <script src="public/layout.js?v=20260301-4"></script>
-    <script src="public/gallery.js?v=20260301-4"></script>
+    <script src="public/data-loader.js?v=20260301-5"></script>
+    <script src="public/tag-filter.js?v=20260301-5"></script>
+    <script src="public/image-loader.js?v=20260301-5"></script>
+    <script src="public/auto-scroll.js?v=20260301-5"></script>
+    <script src="public/layout.js?v=20260301-5"></script>
+    <script src="public/gallery.js?v=20260301-5"></script>
   </body>
 </html> 

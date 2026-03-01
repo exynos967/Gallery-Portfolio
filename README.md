@@ -132,7 +132,7 @@ admin / admin
 - `gallery-index.json` 自定义地址
 - 页面信息：
   - 网页标题 `site.title`
-  - 网页图片 `site.imageUrl`（favicon/分享封面，可选）
+  - 网页图片 `site.imageUrl`（favicon/分享封面/页头 logo，可选；建议填 ImgBed 文件路径，如 `logo.png` / `folder/logo.webp`，前台会自动拼成 URL；也可填完整 URL）
 - ImgBed API 参数：
   - 基础域名 `baseUrl`
   - 私有令牌 `apiToken`（仅管理端保存，不在 public-config 暴露）

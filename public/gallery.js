@@ -707,6 +707,41 @@ class Gallery {
         return '';
     }
 
+    resolveSiteImageUrl(imageUrlInput, remoteConfig) {
+        let raw = String(imageUrlInput || '').trim();
+        if (!raw) return '';
+
+        if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) {
+            return raw;
+        }
+
+        if (raw.startsWith('imgbed:')) {
+            raw = raw.slice('imgbed:'.length).trim();
+        }
+
+        if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) {
+            return raw;
+        }
+
+        const imgbedConfig = remoteConfig?.imgbed || {};
+        const baseUrl = String(imgbedConfig.baseUrl || imgbedConfig.base_url || '').trim();
+        const fileRoutePrefix =
+            String(imgbedConfig.fileRoutePrefix || imgbedConfig.file_route_prefix || '/file').trim() || '/file';
+
+        if (!baseUrl) {
+            return raw;
+        }
+
+        const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+        let cleanPath = raw.replace(/^\/+/, '');
+        const cleanPrefix = String(fileRoutePrefix).replace(/^\/+|\/+$/g, '');
+        if (cleanPrefix && !cleanPath.startsWith(`${cleanPrefix}/`)) {
+            cleanPath = `${cleanPrefix}/${cleanPath}`;
+        }
+
+        return `${cleanBaseUrl}/${encodeURI(cleanPath)}`;
+    }
+
     applyRemoteConfigToPage(remoteConfig) {
         if (!remoteConfig || typeof remoteConfig !== 'object') {
             return;
@@ -716,21 +751,41 @@ class Gallery {
         const title = String(siteConfig.title || '').trim();
         if (title) {
             document.title = title;
-            const headerTitle = document.querySelector('header h1 a');
-            if (headerTitle) {
-                headerTitle.textContent = title;
-                headerTitle.setAttribute('title', title);
-                headerTitle.setAttribute('aria-label', title);
+            const headerTitleText = document.getElementById('site-title-text');
+            if (headerTitleText) {
+                headerTitleText.textContent = title;
+            } else {
+                const headerTitle = document.querySelector('header h1 a');
+                if (headerTitle) {
+                    headerTitle.textContent = title;
+                }
+            }
+            const headerTitleLink = document.querySelector('header h1 a');
+            if (headerTitleLink) {
+                headerTitleLink.setAttribute('title', title);
+                headerTitleLink.setAttribute('aria-label', title);
             }
         }
 
-        const imageUrl = String(siteConfig.imageUrl || '').trim();
-        if (!imageUrl) return;
+        const resolvedImageUrl = this.resolveSiteImageUrl(siteConfig.imageUrl, remoteConfig);
 
-        const type = this.guessImageMimeType(imageUrl);
+        const logo = document.getElementById('site-logo');
+        if (logo) {
+            if (resolvedImageUrl) {
+                logo.src = resolvedImageUrl;
+                logo.classList.remove('site-logo-hidden');
+            } else {
+                logo.removeAttribute('src');
+                logo.classList.add('site-logo-hidden');
+            }
+        }
+
+        if (!resolvedImageUrl) return;
+
+        const type = this.guessImageMimeType(resolvedImageUrl);
         const existingIcon = document.querySelector('link[rel~="icon"]');
         if (existingIcon) {
-            existingIcon.setAttribute('href', imageUrl);
+            existingIcon.setAttribute('href', resolvedImageUrl);
             if (type) {
                 existingIcon.setAttribute('type', type);
             } else {
@@ -741,7 +796,7 @@ class Gallery {
 
         const icon = document.createElement('link');
         icon.rel = 'icon';
-        icon.href = imageUrl;
+        icon.href = resolvedImageUrl;
         if (type) {
             icon.type = type;
         }
