@@ -370,6 +370,10 @@ class Gallery {
         if (this.uploadUiInitialized) return;
         this.uploadUiInitialized = true;
 
+        // Android 上如果 `accept="image/*"`，Chrome/系统往往会弹出“相册式”的 Photo Picker。
+        // 移除 accept 可更大概率直接打开系统文件管理器，让用户按目录选图。
+        this.optimizeUploadPickerForAndroid();
+
         this.fullscreenUploadBtn.addEventListener('click', () => {
             this.openUploadModal();
         });
@@ -377,6 +381,20 @@ class Gallery {
         if (this.uploadFileInput) {
             this.uploadFileInput.addEventListener('change', () => {
                 const file = this.uploadFileInput.files?.[0];
+
+                // 前端先做一次图片类型校验，避免用户选错文件后还要等上传报错。
+                if (file && !String(file.type || '').toLowerCase().startsWith('image/')) {
+                    this.setUploadStatus('仅支持上传图片文件。', 'error');
+                    this.uploadFileInput.value = '';
+                    if (this.uploadDropzone) {
+                        this.uploadDropzone.classList.remove('has-file');
+                    }
+                    if (this.uploadFileNameElement) {
+                        this.uploadFileNameElement.textContent = '';
+                    }
+                    return;
+                }
+
                 if (this.uploadDropzone) {
                     this.uploadDropzone.classList.toggle('has-file', Boolean(file));
                 }
@@ -420,6 +438,26 @@ class Gallery {
                 event.preventDefault();
                 this.handleUploadSubmit();
             });
+        }
+    }
+
+    optimizeUploadPickerForAndroid() {
+        if (!this.uploadFileInput) return;
+
+        // 仅对 Android 做调整，避免影响桌面/iOS 的“从相册选图”体验。
+        const ua = String(navigator.userAgent || '');
+        if (!/Android/i.test(ua)) return;
+
+        // 关键点：移除 accept，使其更接近“选择文件”，从而走文件管理器。
+        // 服务器端仍会校验 MIME 类型为 image/*，这里也做了前端兜底校验。
+        try {
+            this.uploadFileInput.removeAttribute('accept');
+        } catch {
+            this.uploadFileInput.accept = '';
+        }
+
+        if (this.uploadDropzone) {
+            this.uploadDropzone.setAttribute('aria-label', '点击从文件管理器选择图片');
         }
     }
 
