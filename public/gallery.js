@@ -19,6 +19,7 @@ class Gallery {
         this.isPageLoading = true;
         this.isRandomImageLoading = false;
         this.singleImageMode = false;
+        this.nextImagePreload = null;
 
         this.fullscreenToggleBtn = null;
         this.shuffleToggleBtn = null;
@@ -56,6 +57,10 @@ class Gallery {
         window.addEventListener('popstate', () => {
             if (this.singleImageMode) return;
             setTimeout(() => this.handleUrlParams(), 0);
+        });
+        window.addEventListener('pagehide', () => this.cancelNextImagePreload());
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') this.cancelNextImagePreload();
         });
 
         this.applyCachedSiteBoot();
@@ -119,7 +124,7 @@ class Gallery {
         const stage = this.ensureSingleImageStage();
         this.singleImageElement?.classList.remove('single-image-ready');
 
-        const imageData = await this.getSingleImageData();
+        let imageData = await this.getSingleImageData();
 
         if (!imageData) {
             stage.classList.add('empty');
@@ -128,40 +133,47 @@ class Gallery {
             return;
         }
 
-        // 单图模式优先加载 preview，首屏更快，再后台无感升级到原图
-        const previewUrl = imageData.preview || imageData.original;
-        const originalUrl = imageData.original || imageData.preview;
-        let displayedUrl = '';
-
         try {
-            await this.loadImageToElement(this.singleImageElement, previewUrl, { fetchPriority: 'high' });
-            displayedUrl = previewUrl;
-        } catch (error) {
-            if (!originalUrl || originalUrl === previewUrl) {
-                console.error('全屏单图加载失败:', error);
-                stage.classList.add('empty');
-                stage.textContent = 'Image load failed';
-                this.hideLoading();
-                return;
-            }
-
             try {
-                await this.loadImageToElement(this.singleImageElement, originalUrl, { fetchPriority: 'high' });
-                displayedUrl = originalUrl;
-            } catch (fallbackError) {
-                console.error('全屏单图加载失败（含回退）:', fallbackError);
-                stage.classList.add('empty');
-                stage.textContent = 'Image load failed';
-                this.hideLoading();
-                return;
+                await this.displaySingleImageData(imageData);
+            } catch (error) {
+                if (!imageData.prefetched) throw error;
+                // 预取图片可能已被图床删除，回退到本次实时选图。
+                imageData = await this.getSingleImageData({ usePrefetch: false });
+                if (!imageData) throw error;
+                await this.displaySingleImageData(imageData);
             }
+        } catch (error) {
+            console.error('全屏单图加载失败（含回退）:', error);
+            stage.classList.add('empty');
+            stage.textContent = 'Image load failed';
+            this.hideLoading();
+            return;
         }
 
         stage.classList.remove('empty');
         this.hideLoading();
+        this.afterSingleImagePaint(() => this.prefetchNextSingleImage());
+    }
 
-        if (originalUrl && displayedUrl && originalUrl !== displayedUrl) {
-            this.preloadAndSwapSingleImageOriginal(originalUrl);
+    async displaySingleImageData(imageData) {
+        const previewUrl = imageData.preview || imageData.original;
+        const originalUrl = imageData.original || imageData.preview;
+        try {
+            await this.loadImageToElement(this.singleImageElement, previewUrl, { fetchPriority: 'high' });
+        } catch (error) {
+            if (!originalUrl || originalUrl === previewUrl) throw error;
+            await this.loadImageToElement(this.singleImageElement, originalUrl, { fetchPriority: 'high' });
+            return;
+        }
+        if (originalUrl && originalUrl !== previewUrl) {
+            const displayedElement = this.singleImageElement;
+            const displayedSrc = displayedElement.src;
+            this.afterSingleImagePaint(() => {
+                if (this.singleImageElement === displayedElement && displayedElement.src === displayedSrc) {
+                    this.preloadAndSwapSingleImageOriginal(originalUrl);
+                }
+            });
         }
     }
 
@@ -186,8 +198,12 @@ class Gallery {
         return stage;
     }
 
-    async getSingleImageData() {
+    async getSingleImageData({ usePrefetch = true } = {}) {
         if (this.dataLoader.hasRandomApi()) {
+            if (usePrefetch) {
+                const prefetched = this.dataLoader.takePrefetchedRandomImage();
+                if (prefetched) return prefetched;
+            }
             try {
                 return await this.dataLoader.fetchRandomImage();
             } catch (error) {
@@ -219,36 +235,111 @@ class Gallery {
 
             imageElement.classList.remove('single-image-ready');
 
-            const loader = new Image();
             try {
-                loader.decoding = 'async';
+                imageElement.loading = 'eager';
+                imageElement.decoding = 'async';
             } catch {
                 // ignore unsupported browsers
             }
             try {
                 if (options.fetchPriority) {
-                    loader.fetchPriority = options.fetchPriority;
+                    imageElement.fetchPriority = options.fetchPriority;
                 }
             } catch {
                 // ignore unsupported browsers
             }
-            loader.onload = () => {
-                imageElement.src = imageUrl;
-                imageElement.classList.add('single-image-ready');
-                if (imageElement === this.singleImageElement && this.singleImageStage) {
-                    const safeUrl = String(imageUrl).replace(/"/g, '\\"');
-                    this.singleImageStage.style.setProperty('--single-image-backdrop', `url("${safeUrl}")`);
-                }
+            const clearHandlers = () => {
+                imageElement.onload = null;
+                imageElement.onerror = null;
+            };
+            imageElement.onload = () => {
+                clearHandlers();
+                this.updateSingleImageBackdrop(imageElement, imageUrl);
                 resolve();
             };
-            loader.onerror = () => {
+            imageElement.onerror = () => {
+                clearHandlers();
+                imageElement.classList.remove('single-image-ready');
                 reject(new Error(`failed to load image: ${imageUrl}`));
             };
-            loader.src = imageUrl;
+            // 让浏览器直接在可见元素中解码，渐进式图片无需等整张下载后才开始显示。
+            imageElement.src = imageUrl;
+            imageElement.classList.add('single-image-ready');
         });
     }
 
+    afterSingleImagePaint(callback) {
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => window.requestAnimationFrame(callback));
+        } else {
+            setTimeout(callback, 50);
+        }
+    }
+
+    updateSingleImageBackdrop(imageElement, imageUrl) {
+        const loadedSrc = imageElement.src;
+        this.afterSingleImagePaint(() => {
+            if (imageElement !== this.singleImageElement || imageElement.src !== loadedSrc || !this.singleImageStage) return;
+            const safeUrl = String(imageUrl).replace(/"/g, '\\"');
+            this.singleImageStage.style.setProperty('--single-image-backdrop', `url("${safeUrl}")`);
+        });
+    }
+
+    cancelNextImagePreload() {
+        const pending = this.nextImagePreload;
+        if (!pending) return;
+        this.nextImagePreload = null;
+        clearTimeout(pending.timeout);
+        pending.controller.abort();
+        if (pending.image) {
+            pending.image.onload = null;
+            pending.image.onerror = null;
+            pending.image.src = '';
+        }
+    }
+
+    prefetchNextSingleImage() {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!this.singleImageMode || this.nextImagePreload || document.visibilityState === 'hidden' || !this.dataLoader.hasRandomApi()) return;
+        if (connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType)) return;
+
+        const pending = { controller: new AbortController(), image: null, timeout: null };
+        const signature = this.dataLoader.getRandomImageSignature();
+        this.nextImagePreload = pending;
+        pending.timeout = setTimeout(() => {
+            if (this.nextImagePreload === pending) this.cancelNextImagePreload();
+        }, 10000);
+        const finish = () => {
+            clearTimeout(pending.timeout);
+            if (pending.image) {
+                pending.image.onload = null;
+                pending.image.onerror = null;
+            }
+            if (this.nextImagePreload === pending) this.nextImagePreload = null;
+        };
+        this.dataLoader.fetchRandomImage({ signal: pending.controller.signal }).then((imageData) => {
+            if (pending.controller.signal.aborted || document.visibilityState === 'hidden') {
+                finish();
+                return;
+            }
+            const image = new Image();
+            pending.image = image;
+            image.decoding = 'async';
+            image.fetchPriority = 'low';
+            image.onload = () => {
+                if (!pending.controller.signal.aborted && document.visibilityState !== 'hidden') {
+                    this.dataLoader.cachePrefetchedRandomImage(imageData, signature);
+                }
+                finish();
+            };
+            image.onerror = finish;
+            image.src = imageData.preview || imageData.original;
+        }).catch(finish);
+    }
+
     preloadAndSwapSingleImageOriginal(originalUrl) {
+        const displayedElement = this.singleImageElement;
+        const displayedSrc = displayedElement?.src;
         const loader = new Image();
         try {
             loader.decoding = 'async';
@@ -262,14 +353,17 @@ class Gallery {
         }
 
         loader.onload = () => {
-            if (!this.singleImageMode || !this.singleImageElement) {
+            if (!this.singleImageMode || this.singleImageElement !== displayedElement || displayedElement.src !== displayedSrc) {
                 return;
             }
-            this.singleImageElement.src = originalUrl;
-            if (this.singleImageStage) {
-                const safeUrl = String(originalUrl).replace(/"/g, '\\"');
-                this.singleImageStage.style.setProperty('--single-image-backdrop', `url("${safeUrl}")`);
-            }
+            loader.onload = null;
+            loader.onerror = null;
+            loader.id = displayedElement.id;
+            loader.alt = displayedElement.alt;
+            loader.className = displayedElement.className;
+            displayedElement.replaceWith(loader);
+            this.singleImageElement = loader;
+            this.updateSingleImageBackdrop(loader, originalUrl);
         };
 
         loader.onerror = () => {
@@ -1097,6 +1191,15 @@ class Gallery {
     }
 
     async ensureWaterfallDependencies() {
+        // 全屏首图不依赖网络字体，字体样式仅在进入瀑布流后加载。
+        if (!document.getElementById('gallery-font')) {
+            const font = document.createElement('link');
+            font.id = 'gallery-font';
+            font.rel = 'stylesheet';
+            font.href = 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap';
+            document.head.appendChild(font);
+        }
+
         if (window.TagFilter && window.ImageLoader && window.AutoScroll) {
             return;
         }

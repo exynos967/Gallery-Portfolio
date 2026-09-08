@@ -157,6 +157,48 @@ class DataLoader {
         return Boolean(source?.random_endpoint || source?.base_url);
     }
 
+    getRandomImageSignature() {
+        const source = this.getSourceInfo() || {};
+        const orientation = this.getConfiguredRandomOrientation(source);
+        return JSON.stringify([
+            source.base_url || window.location.origin,
+            source.random_endpoint || '',
+            source.file_route_prefix || '/file',
+            this.getConfiguredListDir(source),
+            orientation,
+            orientation === 'auto' ? [window.innerWidth, window.innerHeight] : null,
+        ]);
+    }
+
+    takePrefetchedRandomImage() {
+        try {
+            const key = 'gallery-next-random-image';
+            const raw = sessionStorage.getItem(key);
+            sessionStorage.removeItem(key);
+            const entry = JSON.parse(raw || 'null');
+            const age = Date.now() - Number(entry?.createdAt);
+            if (!entry || !Number.isFinite(age) || age < 0 || age > 60000 || entry.signature !== this.getRandomImageSignature()) {
+                return null;
+            }
+            if (!/^https?:\/\//i.test(entry.image?.original || '') || !/^https?:\/\//i.test(entry.image?.preview || '')) {
+                return null;
+            }
+            return { ...entry.image, prefetched: true };
+        } catch {
+            return null;
+        }
+    }
+
+    cachePrefetchedRandomImage(image, signature = this.getRandomImageSignature()) {
+        try {
+            sessionStorage.setItem('gallery-next-random-image', JSON.stringify({
+                image, signature, createdAt: Date.now(),
+            }));
+        } catch {
+            // 缓存不可用时仍正常显示当前图片。
+        }
+    }
+
     // 获取一张随机图（ImgBed random API）
     async fetchRandomImage(options = {}) {
         const source = this.getSourceInfo();
@@ -189,6 +231,7 @@ class DataLoader {
 
         const response = await fetch(urlObj.toString(), {
             method: 'GET',
+            ...(options.signal ? { signal: options.signal } : {}),
             headers: {
                 Accept: 'application/json, text/plain;q=0.9, */*;q=0.8',
             },

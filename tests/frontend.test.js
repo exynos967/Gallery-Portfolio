@@ -12,6 +12,8 @@ const sources = Object.fromEntries(await Promise.all(
 function createBrowser() {
   const pendingImages = [];
   const storage = new Map();
+  const session = new Map();
+  const frames = [];
   const elements = new Map();
   const history = [];
   class Element {
@@ -21,10 +23,26 @@ function createBrowser() {
       this.style = {};
       this.dataset = {};
       this.offsetHeight = 0;
-      this.classList = { add() {}, remove() {}, contains() { return false; } };
+      const classes = new Set();
+      this.classList = {
+        add: (...names) => names.forEach((name) => classes.add(name)),
+        remove: (...names) => names.forEach((name) => classes.delete(name)),
+        contains: (name) => classes.has(name),
+      };
     }
-    appendChild(child) { this.children.push(child); child.parentNode = this; }
+    appendChild(child) {
+      this.children.push(child);
+      child.parentNode = this;
+      if (child.id) elements.set(child.id, child);
+    }
     removeChild(child) { this.children.splice(this.children.indexOf(child), 1); child.parentNode = null; }
+    replaceWith(child) {
+      if (!this.parentNode) return;
+      const parent = this.parentNode;
+      parent.children.splice(parent.children.indexOf(this), 1, child);
+      child.parentNode = parent;
+      this.parentNode = null;
+    }
     addEventListener() {}
     removeEventListener() {}
   }
@@ -37,6 +55,8 @@ function createBrowser() {
   gallery.style.opacity = "1";
   const loadedImages = () => gallery.children.flatMap((column) => column.children);
   const document = {
+    body: new Element(),
+    head: new Element(),
     createElement: (tag) => new Element(tag),
     addEventListener() {},
     getElementById: (id) => elements.get(id) || null,
@@ -51,6 +71,7 @@ function createBrowser() {
     innerHeight: 180, innerWidth: 500, scrollY: 0,
     location: new URL("https://gallery.example/"),
     addEventListener() {},
+    requestAnimationFrame: (callback) => frames.push(callback),
     history: { pushState(_state, _title, url) {
       history.push(url);
       window.location = new URL(url, window.location.origin);
@@ -61,10 +82,16 @@ function createBrowser() {
     navigator: { connection: { saveData: true } },
     console: { log() {}, warn() {}, error() {} },
     localStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
+    sessionStorage: {
+      getItem: (key) => session.get(key) ?? null,
+      setItem: (key, value) => session.set(key, value),
+      removeItem: (key) => session.delete(key),
+    },
     setTimeout() { return 1; }, clearTimeout() {},
   });
   for (const [name, source] of Object.entries(sources)) vm.runInContext(source, context, { filename: `${name}.js` });
-  return { context, window, document, gallery, pendingImages, loadedImages, history, storage };
+  const paintFrame = () => frames.splice(0).forEach((callback) => callback());
+  return { context, window, document, gallery, pendingImages, loadedImages, history, storage, session, paintFrame };
 }
 
 function createImageLoader(browser) {
@@ -248,5 +275,252 @@ test("静态索引再次筛选子目录时兼容完整路径与旧相对路径",
     const filtered = data.applyConfiguredDirFilter(data.galleryData);
     assert.equal(filtered.total_images, 1);
     assert.equal(filtered.gallery.photos.images[0].original, `https://img.example/file/${prefix}photos/a.jpg`);
+  }
+});
+
+test("全屏首图直接进入显示元素，不等待额外隐藏图片下载", async (t) => {
+  const browser = createBrowser();
+  const Gallery = vm.runInContext("Gallery", browser.context);
+  const gallery = Object.create(Gallery.prototype);
+  const target = new browser.context.Image();
+  const url = "https://img.example/fullscreen.jpg";
+  const ready = gallery.loadImageToElement(target, url, { fetchPriority: "high" });
+  const beganOnDisplayElement = browser.pendingImages[0] === target;
+  assert.equal(target.classList.contains("single-image-ready"), true, "下载期间允许渐进式图片绘制");
+  browser.pendingImages[0].onload();
+  await ready;
+  t.diagnostic(`首图加载节点数：${new Set(browser.pendingImages).size}；直接在显示元素发起：${beganOnDisplayElement}`);
+  assert.equal(beganOnDisplayElement, true);
+  assert.equal(browser.pendingImages.length, 1);
+  assert.equal(target.fetchPriority, "high");
+  assert.equal(target.onload, null);
+  assert.equal(target.onerror, null);
+});
+
+test("公共样式不再通过网络字体阻塞全屏首图初始化", async () => {
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+  assert.equal(/@import\s+url\([^)]*fonts\.googleapis/i.test(css), false);
+});
+
+test("全屏随机首图仍保留目录和方向筛选，直接显示返回的图片", async () => {
+  const browser = createBrowser();
+  const Gallery = vm.runInContext("Gallery", browser.context);
+  const gallery = Object.create(Gallery.prototype);
+  gallery.dataLoader = new browser.window.DataLoader();
+  gallery.dataLoader.setRuntimeSourceConfig({
+    base_url: "https://img.example", random_endpoint: "/random",
+    list_dir: "wallpapers", random_orientation: "landscape",
+  });
+  gallery.singleImageElement = new browser.context.Image();
+  gallery.singleImageStage = browser.document.createElement("div");
+  gallery.singleImageStage.style.setProperty = function (key, value) { this[key] = value; };
+  gallery.setupFullscreenUploadUi = () => {};
+  let finished = false;
+  gallery.hideLoading = () => { finished = true; };
+  const requests = [];
+  browser.context.fetch = async (url) => {
+    requests.push(new URL(url));
+    return new Response("/file/wallpapers/photo.jpg", { headers: { "Content-Type": "text/plain" } });
+  };
+  const ready = gallery.initSingleImageMode();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].searchParams.get("dir"), "wallpapers");
+  assert.equal(requests[0].searchParams.get("orientation"), "landscape");
+  assert.equal(gallery.singleImageElement.src, "https://img.example/file/wallpapers/photo.jpg");
+  assert.equal(finished, false);
+  gallery.singleImageElement.onload();
+  await ready;
+  assert.equal(finished, true);
+  assert.equal(browser.pendingImages.length, 1);
+  assert.equal(browser.document.head.children.length, 0);
+  assert.equal(gallery.singleImageStage.style["--single-image-backdrop"], undefined);
+  browser.paintFrame();
+  assert.equal(gallery.singleImageStage.style["--single-image-backdrop"], undefined);
+  browser.paintFrame();
+  assert.equal(gallery.singleImageStage.style["--single-image-backdrop"], 'url("https://img.example/file/wallpapers/photo.jpg")');
+});
+
+test("全屏预览图加载失败后仍回退原图，失败回调不会残留", async () => {
+  const browser = createBrowser();
+  const Gallery = vm.runInContext("Gallery", browser.context);
+  const gallery = Object.create(Gallery.prototype);
+  gallery.singleImageElement = new browser.context.Image();
+  gallery.singleImageStage = browser.document.createElement("div");
+  gallery.singleImageStage.style.setProperty = function (key, value) { this[key] = value; };
+  gallery.setupFullscreenUploadUi = () => {};
+  gallery.hideLoading = () => {};
+  gallery.getSingleImageData = async () => ({
+    preview: "https://img.example/preview.jpg", original: "https://img.example/original.jpg",
+  });
+  gallery.preloadAndSwapSingleImageOriginal = () => assert.fail("已经显示原图，不应再次预加载");
+  const ready = gallery.initSingleImageMode();
+  await new Promise((resolve) => setImmediate(resolve));
+  gallery.singleImageElement.onerror();
+  assert.equal(gallery.singleImageElement.classList.contains("single-image-ready"), false);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(gallery.singleImageElement.src, "https://img.example/original.jpg");
+  gallery.singleImageElement.onload();
+  await ready;
+  assert.equal(gallery.singleImageElement.onerror, null);
+  assert.equal(gallery.singleImageElement.classList.contains("single-image-ready"), true);
+});
+
+test("瀑布流仍加载原有字体，重复初始化不重复添加字体请求", async () => {
+  const browser = createBrowser();
+  const Gallery = vm.runInContext("Gallery", browser.context);
+  const gallery = Object.create(Gallery.prototype);
+  browser.window.AutoScroll = function () {};
+  await gallery.ensureWaterfallDependencies();
+  await gallery.ensureWaterfallDependencies();
+  const fonts = browser.document.head.children.filter((element) => element.rel === "stylesheet");
+  assert.equal(fonts.length, 1);
+  assert.equal(new URL(fonts[0].href).hostname, "fonts.googleapis.com");
+});
+
+function createFullscreenGallery(browser) {
+  const Gallery = vm.runInContext("Gallery", browser.context);
+  const gallery = Object.create(Gallery.prototype);
+  gallery.singleImageMode = true;
+  gallery.settings = { shuffle: true };
+  gallery.dataLoader = new browser.window.DataLoader();
+  gallery.dataLoader.setRuntimeSourceConfig({ base_url: "https://img.example", list_dir: "wallpapers" });
+  gallery.singleImageElement = new browser.context.Image();
+  gallery.singleImageElement.id = "single-image";
+  gallery.singleImageElement.alt = "Gallery Image";
+  gallery.singleImageElement.className = "single-image-ready";
+  gallery.singleImageStage = browser.document.createElement("div");
+  gallery.singleImageStage.style.setProperty = function (key, value) { this[key] = value; };
+  gallery.singleImageStage.appendChild(gallery.singleImageElement);
+  gallery.setupFullscreenUploadUi = () => {};
+  gallery.readyCount = 0;
+  gallery.hideLoading = () => gallery.readyCount++;
+  return gallery;
+}
+
+test("下一张预取完成后，刷新可跳过随机接口，缓存只消费一次", async (t) => {
+  const browser = createBrowser();
+  browser.context.navigator.connection.saveData = false;
+  let randomRequests = 0;
+  browser.context.fetch = async () => {
+    randomRequests++;
+    return new Response("/file/wallpapers/next.jpg");
+  };
+  const gallery = createFullscreenGallery(browser);
+  gallery.prefetchNextSingleImage();
+  gallery.prefetchNextSingleImage();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(randomRequests, 1);
+  assert.equal(browser.pendingImages.length, 1);
+  assert.equal(browser.pendingImages[0].fetchPriority, "low");
+  assert.equal(gallery.dataLoader.takePrefetchedRandomImage(), null, "图片下载完成前不能发布预取结果");
+  browser.pendingImages[0].onload();
+  const nextVisit = createFullscreenGallery(browser);
+  const image = await nextVisit.getSingleImageData();
+  assert.equal(image.original, "https://img.example/file/wallpapers/next.jpg");
+  assert.equal(image.prefetched, true);
+  assert.equal(randomRequests, 1);
+  await nextVisit.getSingleImageData();
+  assert.equal(randomRequests, 2);
+  t.diagnostic("命中预取的刷新：前台随机接口请求数为 0，条目消费后不会固定重复展示。");
+});
+
+test("预取结果在目录、方向变化或过期后失效", () => {
+  for (const change of ["dir", "orientation", "expired"]) {
+    const browser = createBrowser();
+    const gallery = createFullscreenGallery(browser);
+    gallery.dataLoader.cachePrefetchedRandomImage({ original: "https://img.example/a.jpg", preview: "https://img.example/a.jpg" });
+    if (change === "expired") {
+      const cached = JSON.parse(browser.session.get("gallery-next-random-image"));
+      cached.createdAt -= 61000;
+      browser.session.set("gallery-next-random-image", JSON.stringify(cached));
+    } else {
+      gallery.dataLoader.setRuntimeSourceConfig({
+        base_url: "https://img.example", list_dir: change === "dir" ? "new-dir" : "wallpapers",
+        random_orientation: change === "orientation" ? "portrait" : "",
+      });
+    }
+    assert.equal(gallery.dataLoader.takePrefetchedRandomImage(), null);
+    assert.equal(browser.session.size, 0);
+  }
+});
+
+test("省流量、弱网及后台页面不预取，离开页面会取消进行中的预取", async () => {
+  const browser = createBrowser();
+  const gallery = createFullscreenGallery(browser);
+  let calls = 0;
+  browser.context.fetch = async () => { calls++; return new Response("/file/wallpapers/a.jpg"); };
+  gallery.prefetchNextSingleImage();
+  browser.context.navigator.connection = { effectiveType: "3g" };
+  gallery.prefetchNextSingleImage();
+  browser.context.navigator.connection = {};
+  browser.document.visibilityState = "hidden";
+  gallery.prefetchNextSingleImage();
+  assert.equal(calls, 0);
+  browser.document.visibilityState = "visible";
+  gallery.prefetchNextSingleImage();
+  await new Promise((resolve) => setImmediate(resolve));
+  const image = browser.pendingImages[0];
+  gallery.cancelNextImagePreload();
+  assert.equal(image.src, "");
+  assert.equal(image.onload, null);
+  assert.equal(browser.session.size, 0);
+});
+
+test("已删除的预取图片会重新实时选图，不停留在错误页面", async () => {
+  const browser = createBrowser();
+  const gallery = createFullscreenGallery(browser);
+  gallery.dataLoader.cachePrefetchedRandomImage({ original: "https://img.example/deleted.jpg", preview: "https://img.example/deleted.jpg" });
+  let requests = 0;
+  browser.context.fetch = async () => { requests++; return new Response("/file/wallpapers/fresh.jpg"); };
+  const ready = gallery.initSingleImageMode();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(requests, 0);
+  gallery.singleImageElement.onerror();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(requests, 1);
+  assert.equal(gallery.singleImageElement.src, "https://img.example/file/wallpapers/fresh.jpg");
+  gallery.singleImageElement.onload();
+  await ready;
+  assert.equal(gallery.readyCount, 1);
+  assert.equal(gallery.singleImageStage.classList.contains("empty"), false);
+});
+
+test("预取过程中页面进入后台时，延迟到达的完成回调不能发布缓存", async () => {
+  const browser = createBrowser();
+  browser.context.navigator.connection.saveData = false;
+  const gallery = createFullscreenGallery(browser);
+  browser.context.fetch = async () => new Response("/file/wallpapers/next.jpg");
+  gallery.prefetchNextSingleImage();
+  await new Promise((resolve) => setImmediate(resolve));
+  const completed = browser.pendingImages[0].onload;
+  browser.document.visibilityState = "hidden";
+  gallery.cancelNextImagePreload();
+  completed();
+  assert.equal(browser.session.size, 0);
+  assert.equal(gallery.nextImagePreload, null);
+});
+
+test("原图升级复用已经下载的图片元素，过期升级不会覆盖后来显示的图片", () => {
+  for (const changed of [false, true]) {
+    const browser = createBrowser();
+    const gallery = createFullscreenGallery(browser);
+    const preview = gallery.singleImageElement;
+    preview.src = "https://img.example/preview.jpg";
+    browser.pendingImages.length = 0;
+    gallery.preloadAndSwapSingleImageOriginal("https://img.example/original.jpg");
+    const original = browser.pendingImages[0];
+    if (changed) preview.src = "https://img.example/uploaded.jpg";
+    original.onload();
+    if (changed) {
+      assert.equal(gallery.singleImageElement, preview);
+      assert.equal(preview.src, "https://img.example/uploaded.jpg");
+    } else {
+      assert.equal(gallery.singleImageElement, original);
+      assert.equal(gallery.singleImageStage.children[0], original);
+      assert.equal(original.id, "single-image");
+      assert.equal(original.alt, "Gallery Image");
+      assert.equal(browser.pendingImages.length, 1);
+    }
   }
 });
