@@ -10,6 +10,9 @@ class ImageLoader {
         this.loadingImagesCount = 0;
         this.columnElements = [];
         this.currentTag = 'all';
+        this.currentImages = [];
+        this.loadGeneration = 0;
+        this.isBatchLoading = false;
         this.isScrollLoading = false;
         this.scrollThrottleTimer = null;
         this.lastScrollY = window.scrollY;
@@ -188,7 +191,9 @@ class ImageLoader {
         if (contentHeight < requiredHeight) {
             const images = this.getCurrentImages();
             if (this.currentIndex < images.length) {
+                const generation = this.loadGeneration;
                 setTimeout(() => {
+                    if (generation !== this.loadGeneration) return;
                     this.loadNextImages(this.currentTag);
                 }, 100);
             }
@@ -197,15 +202,13 @@ class ImageLoader {
 
     // 获取当前标签的图片
     getCurrentImages() {
-        if (this.currentTag === 'all') {
-            return this.dataLoader.getAllImages();
-        } else {
-            return this.dataLoader.getImagesByCategory(this.currentTag);
-        }
+        return this.currentImages;
     }
 
     // 加载下一批图片
     loadNextImages(tag) {
+        if (this.isBatchLoading || tag !== this.currentTag) return;
+        const generation = this.loadGeneration;
         const images = this.getCurrentImages();
         
         // 检查是否还有更多图片需要加载
@@ -215,6 +218,7 @@ class ImageLoader {
         }
 
         // 设置加载状态
+        this.isBatchLoading = true;
         this.showLoadingMessage();
         
         // 确保gallery可见
@@ -279,8 +283,10 @@ class ImageLoader {
         
         // 递归加载单张图片
         const loadSingleImage = (index) => {
+            if (generation !== this.loadGeneration) return;
             // 检查是否完成加载
             if (index >= images.length || remainingToLoad <= 0) {
+                this.isBatchLoading = false;
                 this.hideLoadingMessage();
                 
                 if (index >= images.length) {
@@ -294,6 +300,7 @@ class ImageLoader {
                 
                 // 重置滚动加载状态
                 setTimeout(() => {
+                    if (generation !== this.loadGeneration || this.isBatchLoading) return;
                     this.isScrollLoading = false;
                 }, 200);
                 
@@ -322,11 +329,12 @@ class ImageLoader {
             let previewFailed = false;
             
             img.onload = () => {
-                if (tag !== this.currentTag) {
+                if (generation !== this.loadGeneration) {
                     console.log(`tag已经切换：当前选中tag:${this.currentTag}，本请求tag:${tag}，跳过加载`);
                     return;
                 }
-                this.loadingImages.splice(this.loadingImages.indexOf(img), 1);
+                const loadingIndex = this.loadingImages.indexOf(img);
+                if (loadingIndex !== -1) this.loadingImages.splice(loadingIndex, 1);
                 
                 try {
                     // 再次检查DOM中是否已存在此图片
@@ -369,8 +377,8 @@ class ImageLoader {
             };
             
             img.onerror = () => {
+                if (generation !== this.loadGeneration) return;
                 console.warn(`预览图加载失败: ${imageUrl}`);
-                this.loadingImages.splice(this.loadingImages.indexOf(img), 1);
                 
                 // 如果预览图加载失败，尝试加载原图
                 if (!previewFailed) {
@@ -381,13 +389,14 @@ class ImageLoader {
                 }
                 
                 // 如果原图也加载失败，跳过这张图片
+                const loadingIndex = this.loadingImages.indexOf(img);
+                if (loadingIndex !== -1) this.loadingImages.splice(loadingIndex, 1);
                 console.error(`原图也加载失败，跳过: ${originalUrl}`);
                 this.currentIndex++;
                 loadSingleImage(this.currentIndex);
             };
             
             // 设置图片属性
-            img.src = imageUrl;
             img.alt = imageData.name || 'Gallery Image';
             img.dataset.original = originalUrl;
             img.dataset.preview = imageUrl;
@@ -402,6 +411,7 @@ class ImageLoader {
             };
             img.addEventListener('click', imgClickHandler);
             img.imgClickHandler = imgClickHandler;
+            img.src = imageUrl;
         };
         
         // 开始加载第一张图片
@@ -652,6 +662,9 @@ class ImageLoader {
 
     // 筛选图片
     filterImages(tag) {
+        this.loadGeneration++;
+        this.isBatchLoading = false;
+        this.isScrollLoading = false;
         // 移除底部"已全部加载完成"的提示消息
         const loadedMsg = document.getElementById('all-loaded-message');
         if (loadedMsg) {
@@ -666,16 +679,22 @@ class ImageLoader {
         
         // 取消正在加载中的图片
         this.loadingImages.forEach((img) => {
-            img.src = "";
             img.onload = null;
             img.onerror = null;
+            img.src = "";
             img.removeEventListener("click", img.imgClickHandler);
         });
         this.loadingImages = [];
+        this.preloadedImages.forEach((img) => { img.src = ''; });
+        this.preloadedImages = [];
         
         console.log(`标签切换到: ${tag}, 已清空已加载图片缓存`);
 
         this.currentTag = tag;
+        // 分页和预加载共享本次筛选的固定顺序，直到切换分类或随机开关。
+        this.currentImages = tag === 'all'
+            ? this.dataLoader.getAllImages()
+            : this.dataLoader.getImagesByCategory(tag);
         this.currentIndex = 0;
         this.imagesLoadedCount = 0;
         this.loadingImagesCount = 0;

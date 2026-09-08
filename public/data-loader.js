@@ -105,9 +105,7 @@ class DataLoader {
         const categories = Object.keys(this.galleryData.gallery);
 
         // 随机打乱分类顺序（可配置）
-        const shuffledCategories = this.shuffleEnabled
-            ? [...categories].sort(() => Math.random() - 0.5)
-            : [...categories];
+        const shuffledCategories = this.shuffleImages(categories);
         
         // 使用Set去重
         const uniqueImageUrls = new Set();
@@ -275,7 +273,11 @@ class DataLoader {
     shuffleImages(images) {
         const copied = [...images];
         if (!this.shuffleEnabled) return copied;
-        return copied.sort(() => Math.random() - 0.5);
+        for (let index = copied.length - 1; index > 0; index--) {
+            const target = Math.floor(Math.random() * (index + 1));
+            [copied[index], copied[target]] = [copied[target], copied[index]];
+        }
+        return copied;
     }
 
     toAbsoluteUrl(urlOrPath, baseUrl) {

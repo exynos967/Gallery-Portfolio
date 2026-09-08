@@ -89,6 +89,56 @@ function finishBatch(browser) {
   }
 }
 
+test("随机图库多批加载后无漏图，查询当前列表不会重新排序", () => {
+  for (const tag of ["all", "photos"]) {
+    const browser = createBrowser();
+    const { loader } = createImageLoader(browser);
+    loader.filterImages(tag);
+    const snapshot = loader.getCurrentImages();
+    assert.equal(loader.getCurrentImages(), snapshot);
+    for (let batch = 0; batch < 50 && loader.currentIndex < 40; batch++) {
+      finishBatch(browser);
+      loader.loadNextImages(tag);
+    }
+    finishBatch(browser);
+    const urls = browser.loadedImages().map((image) => image.dataset.original);
+    assert.equal(urls.length, 40);
+    assert.equal(new Set(urls).size, 40);
+    assert.deepEqual(urls, [...snapshot].map((image) => image.original));
+  }
+});
+
+test("重复加载入口不并发启动批次；同分类重置后旧回调不推进新游标", () => {
+  const browser = createBrowser();
+  const { loader } = createImageLoader(browser);
+  loader.filterImages("photos");
+  const originalRequest = browser.pendingImages[0];
+  const oldOnload = originalRequest.onload;
+  const oldOnerror = originalRequest.onerror;
+  loader.loadNextImages("photos");
+  assert.equal(browser.pendingImages.length, 1);
+  loader.filterImages("photos");
+  oldOnload();
+  oldOnerror();
+  assert.equal(loader.currentIndex, 0);
+  assert.equal(browser.loadedImages().length, 0);
+  finishBatch(browser);
+  assert.ok(loader.currentIndex > 0);
+});
+
+test("预览失败后的原图请求仍可随分类切换取消", () => {
+  const browser = createBrowser();
+  const { loader } = createImageLoader(browser);
+  loader.filterImages("photos");
+  const image = browser.pendingImages[0];
+  image.onerror();
+  assert.ok(loader.loadingImages.includes(image));
+  loader.filterImages("all");
+  assert.equal(image.src, "");
+  assert.equal(image.onload, null);
+  assert.equal(image.onerror, null);
+});
+
 test("显式清空目录和方向可覆盖静态索引的 source 配置", () => {
   const browser = createBrowser();
   const Gallery = vm.runInContext("Gallery", browser.context);
