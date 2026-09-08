@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gallery Admin</title>
-    <link rel="stylesheet" href="admin.css?v=20260301-10" />
+    <link rel="stylesheet" href="admin.css?v=20260908-1" />
   </head>
   <body>
     <main class="admin-shell">
@@ -222,11 +222,13 @@
         </form>
       </section>
 
-      <section class="card status-card">
-        <p id="status-text" role="status" aria-live="polite">准备就绪。</p>
-      </section>
     </main>
 
-    <script src="admin.js?v=20260301-10"></script>
+    <div id="status-notification" class="status-notification" hidden>
+      <p id="status-text" role="status" aria-live="polite" aria-atomic="true"></p>
+      <button id="dismiss-status-btn" class="dismiss-status-btn" type="button" aria-label="关闭提示">×</button>
+    </div>
+
+    <script src="admin.js?v=20260908-1"></script>
   </body>
 </html>

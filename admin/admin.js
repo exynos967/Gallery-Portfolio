@@ -15,6 +15,9 @@
   const loginPanel = document.getElementById("login-panel");
   const dashboardPanel = document.getElementById("dashboard-panel");
   const statusText = document.getElementById("status-text");
+  const statusNotification = document.getElementById("status-notification");
+  const dismissStatusBtn = document.getElementById("dismiss-status-btn");
+  let statusTimer = null;
 
   const loginForm = document.getElementById("login-form");
   const loginBtn = document.getElementById("login-btn");
@@ -58,9 +61,25 @@
   const dirBreadcrumb = document.getElementById("dir-breadcrumb");
   const dirChildren = document.getElementById("dir-children");
 
+  function dismissStatus() {
+    clearTimeout(statusTimer);
+    statusTimer = null;
+    statusNotification.hidden = true;
+    statusText.textContent = "";
+  }
+
+  dismissStatusBtn.addEventListener("click", dismissStatus);
+
   function setStatus(message, level = "info") {
+    dismissStatus();
+    // 请求进行中由对应按钮反馈，不再占用独立状态区域。
+    if (!message || level === "info") return;
     statusText.textContent = message;
     statusText.dataset.level = level;
+    statusNotification.hidden = false;
+    if (level === "success") {
+      statusTimer = setTimeout(dismissStatus, 4000);
+    }
   }
 
   function setButtonLoading(button, loading, loadingText, defaultText) {
@@ -424,10 +443,10 @@
     }
   }
 
-  function resetConfigForm() {
+  function resetConfigForm({ notify = true } = {}) {
     if (latestConfig) {
       fillConfigForm(latestConfig);
-      setStatus("已恢复到最近一次读取的配置。");
+      if (notify) setStatus("已恢复到最近一次读取的配置。", "success");
       return;
     }
     clearDirectoryPicker();
@@ -459,7 +478,7 @@
         description: "请填写图片描述并选择图片后上传。",
       },
     });
-    setStatus("已重置为默认配置。");
+    if (notify) setStatus("已重置为默认配置。", "success");
   }
 
   async function loadDomainConfig() {
@@ -576,12 +595,12 @@
     clearDirectoryPicker();
     localStorage.removeItem(TOKEN_KEY);
     showLoginPanel();
-    setStatus("已退出登录。");
+    setStatus("已退出登录。", "success");
   }
 
   async function bootstrap() {
     domainInput.value = window.location.host;
-    resetConfigForm();
+    resetConfigForm({ notify: false });
 
     loginForm.addEventListener("submit", login);
     configForm.addEventListener("submit", saveConfig);
