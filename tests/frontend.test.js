@@ -180,3 +180,21 @@ test("显式清空目录和方向可覆盖静态索引的 source 配置", () => 
   assert.equal(gallery.dataLoader.getConfiguredListDir(), "");
   assert.equal(gallery.dataLoader.getConfiguredRandomOrientation(), "");
 });
+
+test("静态索引再次筛选子目录时兼容完整路径与旧相对路径", () => {
+  for (const prefix of ["foo/", ""]) {
+    const browser = createBrowser();
+    const data = new browser.window.DataLoader();
+    data.galleryData = {
+      source: { list_dir: "foo", file_route_prefix: "/file" },
+      gallery: { photos: { images: [
+        { original: `https://img.example/file/${prefix}photos/a.jpg` },
+        { original: `https://img.example/file/${prefix}other/b.jpg` },
+      ] } },
+    };
+    data.setRuntimeSourceConfig({ list_dir: "foo/photos" });
+    const filtered = data.applyConfiguredDirFilter(data.galleryData);
+    assert.equal(filtered.total_images, 1);
+    assert.equal(filtered.gallery.photos.images[0].original, `https://img.example/file/${prefix}photos/a.jpg`);
+  }
+});

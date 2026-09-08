@@ -19,11 +19,11 @@ function normalizeDirPath(input) {
 
 function sanitizeImgbedInput(imgbed = {}) {
   return {
-    baseUrl: String(imgbed.baseUrl || "").trim(),
-    listEndpoint: String(imgbed.listEndpoint || "").trim(),
-    fileRoutePrefix: String(imgbed.fileRoutePrefix || "").trim(),
-    apiToken: String(imgbed.apiToken || "").trim(),
-    listDir: normalizeDirPath(imgbed.listDir),
+    baseUrl: imgbed.baseUrl === undefined ? undefined : String(imgbed.baseUrl ?? "").trim(),
+    listEndpoint: imgbed.listEndpoint === undefined ? undefined : String(imgbed.listEndpoint ?? "").trim(),
+    fileRoutePrefix: imgbed.fileRoutePrefix === undefined ? undefined : String(imgbed.fileRoutePrefix ?? "").trim(),
+    apiToken: imgbed.apiToken === undefined ? undefined : String(imgbed.apiToken ?? "").trim(),
+    listDir: imgbed.listDir === undefined ? undefined : normalizeDirPath(imgbed.listDir),
     recursive: imgbed.recursive === undefined ? undefined : Boolean(imgbed.recursive),
     pageSize: toPositiveInt(imgbed.pageSize, undefined, 500),
   };
@@ -33,13 +33,13 @@ function mergeImgbedConfig(storedImgbed = {}, overrideImgbed = {}) {
   const recursiveFallback = storedImgbed.recursive === undefined ? true : Boolean(storedImgbed.recursive);
 
   return {
-    baseUrl: String(overrideImgbed.baseUrl || storedImgbed.baseUrl || "").trim(),
+    baseUrl: String(overrideImgbed.baseUrl ?? storedImgbed.baseUrl ?? "").trim(),
     listEndpoint:
-      String(overrideImgbed.listEndpoint || storedImgbed.listEndpoint || "/api/manage/list").trim() || "/api/manage/list",
+      String(overrideImgbed.listEndpoint ?? storedImgbed.listEndpoint ?? "/api/manage/list").trim() || "/api/manage/list",
     fileRoutePrefix:
-      String(overrideImgbed.fileRoutePrefix || storedImgbed.fileRoutePrefix || "/file").trim() || "/file",
-    apiToken: String(overrideImgbed.apiToken || storedImgbed.apiToken || "").trim(),
-    listDir: normalizeDirPath(overrideImgbed.listDir || storedImgbed.listDir || ""),
+      String(overrideImgbed.fileRoutePrefix ?? storedImgbed.fileRoutePrefix ?? "/file").trim() || "/file",
+    apiToken: String(overrideImgbed.apiToken ?? storedImgbed.apiToken ?? "").trim(),
+    listDir: normalizeDirPath(overrideImgbed.listDir ?? storedImgbed.listDir ?? ""),
     recursive: overrideImgbed.recursive === undefined ? recursiveFallback : Boolean(overrideImgbed.recursive),
     pageSize: toPositiveInt(overrideImgbed.pageSize, toPositiveInt(storedImgbed.pageSize, 200, 500), 500),
   };
@@ -152,6 +152,8 @@ async function listAllFiles(sourceConfig) {
 
 function extractDirectoriesFromFiles(files, sourceConfig) {
   const directories = new Set();
+  const baseDir = normalizeDirPath(sourceConfig.listDir);
+  if (baseDir) directories.add(baseDir);
 
   for (const item of files) {
     const rawPath = item?.name || item?.path || item?.src || "";
@@ -165,7 +167,8 @@ function extractDirectoriesFromFiles(files, sourceConfig) {
     if (parts.length <= 1) continue;
 
     for (let index = 1; index < parts.length; index += 1) {
-      directories.add(parts.slice(0, index).join("/"));
+      const relativeDir = parts.slice(0, index).join("/");
+      directories.add(baseDir ? `${baseDir}/${relativeDir}` : relativeDir);
     }
   }
 

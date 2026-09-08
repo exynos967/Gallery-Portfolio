@@ -233,16 +233,18 @@ function buildGalleryPayload(sourceConfig, files) {
 
     const pathWithoutDir = stripDirPrefix(normalizedPath, sourceConfig.listDir);
     if (!pathWithoutDir) continue;
+    const baseDir = String(sourceConfig.listDir || "").replace(/^\/+|\/+$/g, "");
+    const fullPath = baseDir ? `${baseDir}/${pathWithoutDir}` : pathWithoutDir;
 
     const parsedPreview = parsePreview(pathWithoutDir, sourceConfig.previewDir);
     if (parsedPreview) {
-      previewMap.set(parsedPreview.dedupeKey, parsedPreview.relativePath);
+      previewMap.set(parsedPreview.dedupeKey, fullPath);
       continue;
     }
 
     const parsedOriginal = parseOriginal(pathWithoutDir, sourceConfig.previewDir);
     if (!parsedOriginal) continue;
-    originals.push(parsedOriginal);
+    originals.push({ ...parsedOriginal, relativePath: fullPath });
   }
 
   const categories = new Map();

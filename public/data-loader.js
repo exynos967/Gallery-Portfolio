@@ -363,13 +363,6 @@ class DataLoader {
             };
         }
 
-        // 若数据源已在父目录过滤过，转为对子路径进行二次筛选
-        let effectiveDir = displayDir;
-        if (sourceListDir && displayDir.startsWith(`${sourceListDir}/`)) {
-            effectiveDir = displayDir.slice(sourceListDir.length + 1);
-        }
-        if (!effectiveDir) return galleryData;
-
         const fileRoutePrefix = source.file_route_prefix || source.fileRoutePrefix || '/file';
         const filteredGallery = {};
         let totalImages = 0;
@@ -381,7 +374,11 @@ class DataLoader {
                     imageItem.original || imageItem.preview,
                     fileRoutePrefix
                 );
-                return relativePath === effectiveDir || relativePath.startsWith(`${effectiveDir}/`);
+                // 同时兼容完整文件路径和旧索引中相对于 source.list_dir 的路径。
+                const fullPath = sourceListDir && relativePath !== sourceListDir && !relativePath.startsWith(`${sourceListDir}/`)
+                    ? `${sourceListDir}/${relativePath}`
+                    : relativePath;
+                return fullPath === displayDir || fullPath.startsWith(`${displayDir}/`);
             });
 
             if (matchedImages.length) {
@@ -394,7 +391,7 @@ class DataLoader {
         });
 
         console.log(
-            `按目录筛选图片: dir=${displayDir}, effectiveDir=${effectiveDir}, 匹配数量=${totalImages}`
+            `按目录筛选图片: dir=${displayDir}, 匹配数量=${totalImages}`
         );
 
         return {

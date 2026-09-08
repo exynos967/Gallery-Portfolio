@@ -200,6 +200,7 @@ async function listAllFiles() {
 
     const response = await fetch(apiUrl, { method: "GET", headers });
     if (!response.ok) {
+    const fullPath = IMGBED_LIST_DIR ? `${IMGBED_LIST_DIR}/${pathWithoutDir}` : pathWithoutDir;
       const reason = await response.text().catch(() => "");
       throw new Error(`请求失败 (${response.status}): ${reason || response.statusText}`);
     }
@@ -257,13 +258,13 @@ async function generateGalleryIndex() {
 
     const previewParsed = IMGBED_ENABLE_PREVIEW_MAPPING ? parsePreviewFile(pathWithoutDir) : null;
     if (previewParsed) {
-      previewMap.set(previewParsed.dedupeKey, previewParsed.previewRelativePath);
+      previewMap.set(previewParsed.dedupeKey, fullPath);
       continue;
     }
 
     const parsed = parseOriginalFile(pathWithoutDir);
     if (!parsed) continue;
-    images.push(parsed);
+    images.push({ ...parsed, relativePath: fullPath });
   }
 
   let totalImages = 0;

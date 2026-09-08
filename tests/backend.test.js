@@ -116,3 +116,45 @@ test("绑定类型错误在显式选择和自动检测时都返回受控配置�
     }
   }
 });
+
+test("目录接口兼容上游全路径和相对路径，并支持从已有目录切回根目录", async (t) => {
+  const env = makeEnv();
+  await saveDomainConfig(env, "gallery.example", { imgbed: {
+    baseUrl: "https://img.example", listDir: "foo", apiToken: "test-upstream-token",
+  } });
+  const { token } = await issueAdminToken(env, env.ADMIN_USERNAME);
+  const seenDirs = [];
+  t.mock.method(globalThis, "fetch", async (url) => {
+    seenDirs.push(new URL(url).searchParams.get("dir"));
+    return Response.json({ files: [{ name: "foo/bar/photo.jpg" }, { name: "baz/other.jpg" }] });
+  });
+  const response = await directories({ env, request: request("/api/admin/directories", {
+    token, method: "POST", body: { domain: "gallery.example", imgbed: { listDir: "foo" } },
+  }) });
+  assert.equal(response.status, 200);
+  const { data } = await response.json();
+  const base = data.tree.children.find((node) => node.path === "foo");
+  assert.ok(base);
+  assert.deepEqual(base.children.map((node) => node.path), ["foo/bar", "foo/baz"]);
+
+  const root = await directories({ env, request: request("/api/admin/directories", {
+    token, method: "POST", body: { domain: "gallery.example", imgbed: { listDir: "" } },
+  }) });
+  assert.equal((await root.json()).data.sourceListDir, "");
+  assert.deepEqual(seenDirs, ["foo", null]);
+});
+
+test("动态图库按子目录分类时，原图和预览图 URL 保留完整父目录", async (t) => {
+  const env = makeEnv();
+  await saveDomainConfig(env, "gallery.example", { galleryDataMode: "imgbed-api", imgbed: {
+    baseUrl: "https://directory-test.example", apiToken: "test-dir-token", listDir: "foo/bar",
+  } });
+  t.mock.method(globalThis, "fetch", async () => Response.json({ files: [
+    { name: "foo/bar/photos/image.jpg" }, { name: "foo/bar/0_preview/photos/image.webp" },
+  ] }));
+  const response = await galleryData({ env, request: request("/api/gallery-data") });
+  assert.equal(response.status, 200);
+  const { data } = await response.json();
+  assert.equal(data.gallery.photos.images[0].original, "https://directory-test.example/file/foo/bar/photos/image.jpg");
+  assert.equal(data.gallery.photos.images[0].preview, "https://directory-test.example/file/foo/bar/0_preview/photos/image.webp");
+});
