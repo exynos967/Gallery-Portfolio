@@ -263,7 +263,6 @@ class DataLoader {
             if (value === null || value === undefined) return;
             if (typeof value === 'string') {
                 const trimmed = value.trim();
-                if (!trimmed) return;
                 normalized[key] = trimmed;
                 return;
             }

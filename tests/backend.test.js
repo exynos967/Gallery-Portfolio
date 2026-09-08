@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
 import { issueAdminToken, requireAdmin, verifyAdminToken } from "../functions/_lib/admin-auth.js";
+import { getDomainConfig, saveDomainConfig, StorageConfigurationError } from "../functions/_lib/config-store.js";
+import { onRequest as middleware } from "../functions/api/_middleware.js";
 import { onRequestPost as login } from "../functions/api/admin/login.js";
 import { onRequestGet as readConfig, onRequestPut as writeConfig } from "../functions/api/admin/config.js";
 import { onRequestPost as directories } from "../functions/api/admin/directories.js";
@@ -75,4 +77,42 @@ test("支持 SHA256 密码登录；错误密码、改签名及更换账号后的
     method: "POST", body: { username: credentials.ADMIN_USERNAME, password: credentials.ADMIN_PASSWORD },
   }) });
   assert.equal(malformed.status, 503);
+});
+
+test("显式 D1/KV 绑定缺失时拒绝读写，并返回可识别的 HTTP 配置错误", async () => {
+  for (const driver of ["d1", "kv"]) {
+    const env = { ...credentials, CONFIG_STORE_DRIVER: driver };
+    await assert.rejects(saveDomainConfig(env, "gallery.example", {}), StorageConfigurationError);
+    await assert.rejects(getDomainConfig(env, "gallery.example"), StorageConfigurationError);
+    const { token } = await issueAdminToken(env, env.ADMIN_USERNAME);
+    const context = { env, request: request("/api/admin/config", {
+      token, method: "PUT", body: { domain: "gallery.example", config: {} },
+    }) };
+    const response = await middleware({ ...context, next: () => writeConfig(context) });
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error, "storage-not-configured");
+  }
+});
+
+test("老配置中未提供的字段仍可继承环境默认值", async () => {
+  const env = makeEnv({ DEFAULT_IMGBED_LIST_DIR: "default-folder" });
+  await env.GALLERY_CONFIG_KV.put("domain:gallery.example", JSON.stringify({ imgbed: {} }));
+  const { config } = await getDomainConfig(env, "gallery.example");
+  assert.equal(config.imgbed.listDir, "default-folder");
+});
+
+test("绑定类型错误在显式选择和自动检测时都返回受控配置错误", async () => {
+  for (const overrides of [
+    { GALLERY_CONFIG_DB: { get() {}, put() {} } },
+    { GALLERY_CONFIG_KV: { prepare() {} } },
+  ]) {
+    const driver = overrides.GALLERY_CONFIG_DB ? "d1" : "kv";
+    for (const explicit of [true, false]) {
+      const env = { ...credentials, ...overrides, ...(explicit ? { CONFIG_STORE_DRIVER: driver } : {}) };
+      const context = { env, request: request("/api/public-config") };
+      const response = await middleware({ ...context, next: () => publicConfig(context) });
+      assert.equal(response.status, 503);
+      assert.equal((await response.json()).error, "storage-not-configured");
+    }
+  }
 });

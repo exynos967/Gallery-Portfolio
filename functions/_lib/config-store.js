@@ -14,6 +14,13 @@ const DEFAULT_UPLOAD_DESCRIPTION = "请填写图片描述并选择图片后上�
 const DEFAULT_SITE_TITLE = "Gallery-Portfolio";
 const DEFAULT_SITE_IMAGE_URL = "";
 
+export class StorageConfigurationError extends Error {
+  constructor(binding) {
+    super(`配置存储绑定缺失或类型不匹配：${binding}。请检查 Pages 的 D1/KV 绑定。`);
+    this.name = "StorageConfigurationError";
+  }
+}
+
 function parseBoolean(input, fallbackValue) {
   if (input === undefined || input === null || input === "") return fallbackValue;
   if (typeof input === "boolean") return input;
@@ -25,12 +32,16 @@ function parseBoolean(input, fallbackValue) {
 
 export function resolveStorageBackend(env) {
   const fromEnv = String(env.CONFIG_STORE_DRIVER || "").toLowerCase().trim();
-  if (fromEnv === "d1") return "d1";
-  if (fromEnv === "kv") return "kv";
-
-  if (env.GALLERY_CONFIG_DB) return "d1";
-  if (env.GALLERY_CONFIG_KV) return "kv";
-  return "memory";
+  const backend = fromEnv === "d1" || fromEnv === "kv"
+    ? fromEnv
+    : env.GALLERY_CONFIG_DB ? "d1" : env.GALLERY_CONFIG_KV ? "kv" : "memory";
+  if (backend === "d1" && typeof env.GALLERY_CONFIG_DB?.prepare !== "function") {
+    throw new StorageConfigurationError("GALLERY_CONFIG_DB");
+  }
+  if (backend === "kv" && (typeof env.GALLERY_CONFIG_KV?.get !== "function" || typeof env.GALLERY_CONFIG_KV?.put !== "function")) {
+    throw new StorageConfigurationError("GALLERY_CONFIG_KV");
+  }
+  return backend;
 }
 
 async function ensureD1Schema(env) {
@@ -58,25 +69,25 @@ function toPositiveInt(input, fallbackValue, maxValue = Number.MAX_SAFE_INTEGER)
 function normalizeRandomOrientation(input, fallbackValue = "") {
   const normalizedFallback = String(fallbackValue || "").trim().toLowerCase();
   const safeFallback = VALID_RANDOM_ORIENTATIONS.has(normalizedFallback) ? normalizedFallback : "";
-  const normalized = String(input || "").trim().toLowerCase();
-  if (!normalized) return safeFallback;
+  const normalized = String(input ?? safeFallback).trim().toLowerCase();
+  if (!normalized) return "";
   return VALID_RANDOM_ORIENTATIONS.has(normalized) ? normalized : safeFallback;
 }
 
 function normalizeImgbedConfig(imgbedConfig = {}, fallbackImgbed = {}) {
   return {
-    baseUrl: String(imgbedConfig.baseUrl || fallbackImgbed.baseUrl || "").trim(),
-    listEndpoint: String(imgbedConfig.listEndpoint || fallbackImgbed.listEndpoint || "").trim(),
-    randomEndpoint: String(imgbedConfig.randomEndpoint || fallbackImgbed.randomEndpoint || "").trim(),
+    baseUrl: String(imgbedConfig.baseUrl ?? fallbackImgbed.baseUrl ?? "").trim(),
+    listEndpoint: String(imgbedConfig.listEndpoint ?? fallbackImgbed.listEndpoint ?? "").trim(),
+    randomEndpoint: String(imgbedConfig.randomEndpoint ?? fallbackImgbed.randomEndpoint ?? "").trim(),
     randomOrientation: normalizeRandomOrientation(
       imgbedConfig.randomOrientation,
       fallbackImgbed.randomOrientation || ""
     ),
     fileRoutePrefix:
-      String(imgbedConfig.fileRoutePrefix || fallbackImgbed.fileRoutePrefix || "/file").trim() || "/file",
-    apiToken: String(imgbedConfig.apiToken || fallbackImgbed.apiToken || "").trim(),
-    listDir: String(imgbedConfig.listDir || fallbackImgbed.listDir || "").trim(),
-    previewDir: String(imgbedConfig.previewDir || fallbackImgbed.previewDir || "0_preview").trim() || "0_preview",
+      String(imgbedConfig.fileRoutePrefix ?? fallbackImgbed.fileRoutePrefix ?? "/file").trim() || "/file",
+    apiToken: String(imgbedConfig.apiToken ?? fallbackImgbed.apiToken ?? "").trim(),
+    listDir: String(imgbedConfig.listDir ?? fallbackImgbed.listDir ?? "").trim(),
+    previewDir: String(imgbedConfig.previewDir ?? fallbackImgbed.previewDir ?? "0_preview").trim() || "0_preview",
     recursive: parseBoolean(imgbedConfig.recursive, parseBoolean(fallbackImgbed.recursive, true)),
     pageSize: toPositiveInt(
       imgbedConfig.pageSize,
@@ -87,9 +98,7 @@ function normalizeImgbedConfig(imgbedConfig = {}, fallbackImgbed = {}) {
 }
 
 function normalizeText(input, fallbackValue = "", maxLength = MAX_UPLOAD_TEXT_LENGTH) {
-  const text = String(input ?? "").trim();
-  const fallback = String(fallbackValue ?? "").trim();
-  const value = text || fallback;
+  const value = String(input ?? fallbackValue ?? "").trim();
   if (!value) return "";
   return value.slice(0, maxLength);
 }

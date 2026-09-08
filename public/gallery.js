@@ -1081,19 +1081,23 @@ class Gallery {
         const baseUrl = String(imgbedConfig.baseUrl || imgbedConfig.base_url || '').trim();
         const randomEndpoint = String(imgbedConfig.randomEndpoint || imgbedConfig.random_endpoint || '').trim();
         const randomOrientation = String(
-            imgbedConfig.randomOrientation || imgbedConfig.random_orientation || ''
+            imgbedConfig.randomOrientation ?? imgbedConfig.random_orientation ?? ''
         ).trim();
         const listEndpoint = String(imgbedConfig.listEndpoint || imgbedConfig.list_endpoint || '').trim();
         const fileRoutePrefix = String(imgbedConfig.fileRoutePrefix || imgbedConfig.file_route_prefix || '').trim();
-        const listDir = String(imgbedConfig.listDir || imgbedConfig.list_dir || '').trim();
+        const listDir = String(imgbedConfig.listDir ?? imgbedConfig.list_dir ?? '').trim();
         const previewDir = String(imgbedConfig.previewDir || imgbedConfig.preview_dir || '').trim();
 
         if (baseUrl) runtimeSource.base_url = baseUrl;
         if (randomEndpoint) runtimeSource.random_endpoint = randomEndpoint;
-        if (randomOrientation) runtimeSource.random_orientation = randomOrientation;
+        if (imgbedConfig.randomOrientation !== undefined || imgbedConfig.random_orientation !== undefined) {
+            runtimeSource.random_orientation = randomOrientation;
+        }
         if (listEndpoint) runtimeSource.list_endpoint = listEndpoint;
         if (fileRoutePrefix) runtimeSource.file_route_prefix = fileRoutePrefix;
-        if (listDir) runtimeSource.list_dir = listDir;
+        if (imgbedConfig.listDir !== undefined || imgbedConfig.list_dir !== undefined) {
+            runtimeSource.list_dir = listDir;
+        }
         if (previewDir) runtimeSource.preview_dir = previewDir;
 
         const hasImgBedOverride = Object.keys(runtimeSource).length > 1;
