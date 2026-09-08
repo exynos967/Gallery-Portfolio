@@ -8,6 +8,7 @@
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import { listImgbedFiles } from "./scripts/lib/list-imgbed-files.js";
 
 dotenv.config();
 
@@ -44,7 +45,9 @@ if (!IMGBED_BASE_URL) {
   process.exit(1);
 }
 
-const normalizedPageSize = Number.isFinite(IMGBED_PAGE_SIZE) && IMGBED_PAGE_SIZE > 0 ? IMGBED_PAGE_SIZE : 200;
+const normalizedPageSize = Number.isFinite(IMGBED_PAGE_SIZE) && IMGBED_PAGE_SIZE >= 1
+  ? Math.min(Math.floor(IMGBED_PAGE_SIZE), 500)
+  : 200;
 
 function parseBoolean(value, defaultValue) {
   if (value === undefined || value === null || value === "") return defaultValue;
@@ -166,72 +169,14 @@ function parsePreviewFile(relativePath) {
   };
 }
 
-function toAuthHeader(token) {
-  if (!token) return null;
-  return token.toLowerCase().startsWith("bearer ") ? token : `Bearer ${token}`;
-}
-
 async function listAllFiles() {
-  const allFiles = [];
-  let start = 0;
-  let page = 1;
-
-  while (true) {
-    const apiUrl = new URL(buildAbsoluteUrl(IMGBED_LIST_ENDPOINT));
-    apiUrl.searchParams.set("start", String(start));
-    apiUrl.searchParams.set("count", String(normalizedPageSize));
-    apiUrl.searchParams.set("fileType", "image");
-    apiUrl.searchParams.set("accessStatus", "normal");
-
-    if (IMGBED_LIST_RECURSIVE) {
-      apiUrl.searchParams.set("recursive", "true");
-    }
-    if (IMGBED_LIST_DIR) {
-      apiUrl.searchParams.set("dir", IMGBED_LIST_DIR);
-    }
-
-    console.log(`请求第 ${page} 页: ${apiUrl.pathname}?${apiUrl.searchParams.toString()}`);
-
-    const headers = { Accept: "application/json" };
-    const authHeader = toAuthHeader(IMGBED_API_TOKEN);
-    if (authHeader) {
-      headers.Authorization = authHeader;
-    }
-
-    const response = await fetch(apiUrl, { method: "GET", headers });
-    if (!response.ok) {
-    const fullPath = IMGBED_LIST_DIR ? `${IMGBED_LIST_DIR}/${pathWithoutDir}` : pathWithoutDir;
-      const reason = await response.text().catch(() => "");
-      throw new Error(`请求失败 (${response.status}): ${reason || response.statusText}`);
-    }
-
-    const payload = await response.json();
-    const files = Array.isArray(payload?.files) ? payload.files : [];
-    const returnedCount =
-      Number.isFinite(Number(payload?.returnedCount)) && Number(payload.returnedCount) >= 0
-        ? Number(payload.returnedCount)
-        : files.length;
-    const totalCount =
-      Number.isFinite(Number(payload?.totalCount)) && Number(payload.totalCount) >= 0
-        ? Number(payload.totalCount)
-        : null;
-
-    allFiles.push(...files);
-    console.log(`第 ${page} 页返回 ${files.length} 条，累计 ${allFiles.length} 条`);
-
-    if (files.length === 0 || returnedCount < normalizedPageSize) {
-      break;
-    }
-
-    start += returnedCount;
-    page += 1;
-
-    if (totalCount !== null && allFiles.length >= totalCount) {
-      break;
-    }
-  }
-
-  return allFiles;
+  return listImgbedFiles({
+    endpoint: buildAbsoluteUrl(IMGBED_LIST_ENDPOINT),
+    apiToken: IMGBED_API_TOKEN,
+    pageSize: normalizedPageSize,
+    listDir: IMGBED_LIST_DIR,
+    recursive: IMGBED_LIST_RECURSIVE,
+  });
 }
 
 async function generateGalleryIndex() {
@@ -255,6 +200,7 @@ async function generateGalleryIndex() {
 
     const pathWithoutDir = stripDirPrefix(normalizedPath);
     if (!pathWithoutDir) continue;
+    const fullPath = IMGBED_LIST_DIR ? `${IMGBED_LIST_DIR}/${pathWithoutDir}` : pathWithoutDir;
 
     const previewParsed = IMGBED_ENABLE_PREVIEW_MAPPING ? parsePreviewFile(pathWithoutDir) : null;
     if (previewParsed) {

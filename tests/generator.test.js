@@ -54,3 +54,13 @@ test("离线生成器保留子目录原图/预览图完整 URL", async (t) => {
   assert.equal(output.gallery.photos.images[0].original, "https://fixture.example/file/foo/bar/photos/a.jpg");
   assert.equal(output.gallery.photos.images[0].preview, "https://fixture.example/file/foo/bar/0_preview/photos/a.webp");
 });
+
+test("重复页导致生成失败时保留已有索引文件", async (t) => {
+  const task = await fixture(t, [{ name: "foo/bar/photos/a.jpg" }]);
+  await assert.rejects(task.run({ IMGBED_PAGE_SIZE: "1" }), (error) => {
+    assert.equal(error.code, 1);
+    assert.match(error.stderr, /重复/);
+    return true;
+  });
+  assert.equal(await readFile(task.output, "utf8"), "previous-index");
+});
