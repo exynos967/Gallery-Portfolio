@@ -1,12 +1,12 @@
 import { getDomainConfig } from "../_lib/config-store.js";
+import { GalleryCache } from "../_lib/gallery-cache.js";
 import { json, noContent, normalizeDomain, pickRequestDomain } from "../_lib/http.js";
 
 const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".avif", ".svg"];
 const MAX_FILES_LIMIT = 10000;
-const CACHE_TTL_MS = 60 * 1000;
 const VALID_RANDOM_ORIENTATIONS = new Set(["", "auto", "landscape", "portrait", "square"]);
 
-const runtimeCache = new Map();
+const runtimeCache = new GalleryCache();
 
 function buildAbsoluteUrl(baseUrl, endpointOrPath) {
   if (!endpointOrPath) return "";
@@ -362,18 +362,17 @@ export async function onRequestGet(context) {
     );
   }
 
-  const cacheKey = makeCacheKey(domain);
-  const now = Date.now();
+  const cacheKey = makeCacheKey(configResult.matchedDomain || "default");
   const signature = makeConfigSignature(sourceConfig);
-  const cached = runtimeCache.get(cacheKey);
+  const cached = runtimeCache.get(cacheKey, signature);
 
-  if (cached && cached.signature === signature && now - cached.timestamp < CACHE_TTL_MS) {
+  if (cached) {
     return json(
       {
         success: true,
         mode: "imgbed-api",
         cached: true,
-        data: cached.data,
+        data: cached,
       },
       {
         headers: {
@@ -387,11 +386,7 @@ export async function onRequestGet(context) {
     const files = await listAllFiles(sourceConfig);
     const payload = buildGalleryPayload(sourceConfig, files);
 
-    runtimeCache.set(cacheKey, {
-      signature,
-      timestamp: now,
-      data: payload,
-    });
+    runtimeCache.set(cacheKey, signature, payload);
 
     return json(
       {

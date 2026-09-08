@@ -183,6 +183,28 @@ test("目录接口兼容上游全路径和相对路径，并支持从已有目�
   assert.deepEqual(seenDirs, ["foo", null]);
 });
 
+test("同一默认图库在不同请求域名下复用缓存，配置变化后重新获取", async (t) => {
+  const env = makeEnv();
+  const config = { galleryDataMode: "imgbed-api", imgbed: {
+    baseUrl: "https://cache-test.example", apiToken: "test-cache-token", listDir: "",
+  } };
+  await saveDomainConfig(env, "default", config);
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => {
+    calls++;
+    return Response.json({ files: [{ name: "photos/image.jpg" }] });
+  });
+  for (let index = 0; index < 20; index++) {
+    const response = await galleryData({ env, request: request(`/api/gallery-data?domain=alias-${index}.example`) });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.total_images, 1);
+  }
+  assert.equal(calls, 1);
+  await saveDomainConfig(env, "default", { ...config, imgbed: { ...config.imgbed, listDir: "new-dir" } });
+  await galleryData({ env, request: request("/api/gallery-data?domain=alias-0.example") });
+  assert.equal(calls, 2);
+});
+
 test("动态图库按子目录分类时，原图和预览图 URL 保留完整父目录", async (t) => {
   const env = makeEnv();
   await saveDomainConfig(env, "gallery.example", { galleryDataMode: "imgbed-api", imgbed: {
