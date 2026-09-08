@@ -5,12 +5,20 @@
   "main": "index.html",
   "type": "module",
   "scripts": {
-    "build": "echo '静态网站，无需构建'",
-    "dev": "echo '请使用本地服务器运行，如: npx serve .'",
-    "serve": "npx serve .",
+    "build": "npm run check",
+    "check": "node scripts/check.js",
+    "test": "node --test",
+    "verify": "npm run check && npm test",
+    "dev": "wrangler pages dev .",
+    "deploy": "wrangler pages deploy .",
+    "serve": "serve .",
     "generate-index": "node generate-gallery-index-imgbed.js",
     "imgbed:generate-index": "node generate-gallery-index-imgbed.js"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "npm@11.16.0",
   "keywords": [
     "gallery",
     "portfolio",
@@ -21,7 +29,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "serve": "^14.2.1"
+    "serve": "^14.2.1",
+    "wrangler": "4.129.1"
   },
   "dependencies": {
     "dotenv": "^17.2.1"

@@ -51,8 +51,10 @@ Gallery-Portfolio/
 
 ### 1) 安装依赖
 
+使用 Node.js 22 或更高版本；仓库 `.nvmrc` 固定了开发版本，依赖由 `package-lock.json` 锁定。
+
 ```bash
-npm install
+npm ci
 ```
 
 ### 2) 在 Cloudflare Pages 配置最小变量
@@ -61,8 +63,8 @@ npm install
 
 ```text
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin
-ADMIN_SESSION_SECRET=change-this-secret
+ADMIN_PASSWORD=<独立的强密码>
+ADMIN_SESSION_SECRET=<随机生成的会话签名密钥>
 ```
 
 并绑定存储：
@@ -85,7 +87,8 @@ npm run serve
 ```
 
 > 说明：`npm run serve` 仅启动静态服务，不会启用 `functions`。  
-> 如需本地调试 `/api/*` 和 `/admin` 完整流程，建议使用 `wrangler pages dev .`。
+> 如需本地调试 `/api/*` 和 `/admin` 完整流程，使用 `npm run dev`（项目内 Wrangler）。
+> 管理员变量放入本地 `.dev.vars`（已忽略），D1/KV 按实际绑定配置；例如 `npm run dev -- --kv GALLERY_CONFIG_KV` 使用本地 KV。`.env` 用于索引脚本，不代替 Functions 的本地变量配置。
 
 ---
 
@@ -100,6 +103,8 @@ npm run imgbed:generate-index
 
 这时才需要填写 `IMGBED_BASE_URL`、`IMGBED_API_TOKEN` 等脚本变量。
 
+索引生成最多读取 200 页、10,000 个文件。重复页、无效游标或超过上限会明确失败，并保留已有索引；每个上游请求超时为 30 秒。
+
 ---
 
 ## 🔐 管理后台（/admin）
@@ -110,17 +115,13 @@ npm run imgbed:generate-index
 https://your-domain.com/admin/
 ```
 
-默认登录账号密码：
-
-```text
-admin / admin
-```
-
-**强烈建议上线后立即修改：**
+**管理员认证没有内置密码或签名密钥，上线前必须配置：**
 
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`（或 `ADMIN_PASSWORD_SHA256`）
 - `ADMIN_SESSION_SECRET`
+
+任一必需项缺失或密码摘要格式无效时，登录和管理接口返回 HTTP 503。旧部署若使用过默认凭据，请轮换密码与会话签名密钥，使旧会话失效。
 
 ### 管理后台可配置项
 
@@ -178,8 +179,8 @@ admin / admin
 ```text
 # 管理员
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin
-ADMIN_SESSION_SECRET=change-this-secret
+ADMIN_PASSWORD=<独立的强密码>
+ADMIN_SESSION_SECRET=<随机生成的会话签名密钥>
 ADMIN_SESSION_HOURS=24
 
 # 配置存储后端：d1 / kv（不填则自动检测）
@@ -224,6 +225,8 @@ ADMIN_SESSION_SECRET
 
 - `GALLERY_CONFIG_DB`（D1）或
 - `GALLERY_CONFIG_KV`（KV）
+
+显式设置 `CONFIG_STORE_DRIVER=d1/kv` 时，对应绑定必须存在，否则接口返回 HTTP 503。未选择驱动且没有绑定时仅使用当前进程内存，适合临时预览，不能持久保存生产配置。
 
 #### B. Pages 可选（不填也能跑）
 
@@ -281,6 +284,9 @@ IMGBED_PREVIEW_*
 
 - `fullscreen`：不使用本地缓存，默认跟随域名配置（除非 URL 参数覆盖）
 - `shuffle`：会记忆本地开关状态（`localStorage`）
+- 每次页面初始化会等待本次远端配置（最多 8 秒），失败时才回退到 24 小时内的本地缓存；缓存回退不会延长其寿命。
+- `/api/public-config` 不使用浏览器或边缘响应缓存；存储自身的一致性仍取决于所用 D1/KV。
+- 后台显式清空目录、随机方向、图片地址等可选字段时，空值会覆盖环境默认值；仅未提供的字段继承默认配置。
 
 当 `galleryDataMode=imgbed-api` 时，前台会请求：
 
@@ -312,7 +318,11 @@ IMGBED_PREVIEW_*
 
 ## 🛠️ 可用脚本
 
-- `npm run build`：静态站点无需构建（占位）
+- `npm run build` / `npm run check`：检查 JavaScript、HTML 内联脚本、JSON、静态资源及 UTF-8 无 BOM 编码，不生成站点文件
+- `npm test`：运行不访问真实图床的回归测试
+- `npm run verify`：依次运行检查和测试
+- `npm run dev`：启动包含 Functions 的本地 Pages 服务
+- `npm run deploy -- --project-name <项目名>`：使用项目内 Wrangler 部署
 - `npm run serve`：本地静态预览
 - `npm run generate-index`：ImgBed 生成索引（推荐）
 - `npm run imgbed:generate-index`：ImgBed 生成索引
@@ -324,12 +334,16 @@ IMGBED_PREVIEW_*
 推荐部署方式：
 
 1. 连接 Git 仓库到 Cloudflare Pages
-2. 设置构建命令为 `npm install`（或按你项目策略）
+2. 设置构建命令为 `npm ci && npm run build`，并选择 Node.js 22 或更高版本
 3. 输出目录为仓库根目录
 4. 配置本文中的环境变量与 D1/KV 绑定
 5. 部署后访问：
    - `/` 前台画廊
    - `/admin/` 管理后台
+
+命令行部署前先执行 `npm ci`，使用 `npm exec -- wrangler login` 登录。
+也可运行 `./deploy.sh <项目名>` 或 `deploy.bat <项目名>`；两个脚本支持 `CLOUDFLARE_PAGES_PROJECT_NAME` 环境变量，未指定时保留原项目名 `gallery-portfolio-static`。
+本地服务用法参见 [Cloudflare Pages 官方文档](https://developers.cloudflare.com/pages/functions/local-development/)。
 
 ---
 
@@ -355,7 +369,7 @@ IMGBED_PREVIEW_*
 ### 4) 本地 `npm run serve` 下 `/api/*` 404
 
 - 这是正常现象（静态服务不跑 Functions）
-- 使用 `wrangler pages dev .` 调试 Functions
+- 使用 `npm run dev` 调试 Functions
 
 ---
 
