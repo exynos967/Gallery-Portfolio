@@ -633,36 +633,30 @@ class Gallery {
         }
 
         const path = window.location.pathname;
-        const tagFromUrl = path.substring(1);
+        let tagFromUrl = '';
+        try {
+            tagFromUrl = decodeURIComponent(path.substring(1));
+        } catch {
+            console.warn('分类路径编码无效，显示全部图片。');
+        }
 
         if (tagFromUrl && tagFromUrl !== '') {
             const categories = this.dataLoader.getCategories();
             if (categories.includes(tagFromUrl)) {
                 this.tagFilter.selectTagByValue(tagFromUrl);
-                this.imageLoader.filterImages(tagFromUrl);
             } else if (this.tagFilter.getCurrentTag() !== 'all') {
                 this.tagFilter.selectTagByValue('all');
-                this.imageLoader.filterImages('all');
             }
         } else if (this.tagFilter.getCurrentTag() !== 'all') {
             this.tagFilter.selectTagByValue('all');
-            this.imageLoader.filterImages('all');
         }
     }
 
     updateUrlForTag(tag) {
         const searchAndHash = `${window.location.search}${window.location.hash}`;
-
-        if (tag === 'all') {
-            const targetUrl = `/${searchAndHash}`;
-            if (`${window.location.pathname}${searchAndHash}` !== targetUrl) {
-                window.history.pushState({}, '', targetUrl);
-            }
-        } else {
-            const newUrl = `/${tag}${searchAndHash}`;
-            if (`${window.location.pathname}${searchAndHash}` !== newUrl) {
-                window.history.pushState({}, '', newUrl);
-            }
+        const targetPath = tag === 'all' ? '/' : `/${encodeURIComponent(tag)}`;
+        if (window.location.pathname !== targetPath) {
+            window.history.pushState({}, '', `${targetPath}${searchAndHash}`);
         }
     }
 
@@ -1126,10 +1120,10 @@ class Gallery {
         const version = this.detectAssetVersion();
         const withVersion = (path) => (version ? `${path}?v=${encodeURIComponent(version)}` : path);
 
-        await this.loadScriptOnce(withVersion('public/tag-filter.js'));
-        await this.loadScriptOnce(withVersion('public/image-loader.js'));
-        await this.loadScriptOnce(withVersion('public/auto-scroll.js'));
-        await this.loadScriptOnce(withVersion('public/layout.js'));
+        await this.loadScriptOnce(withVersion('/public/tag-filter.js'));
+        await this.loadScriptOnce(withVersion('/public/image-loader.js'));
+        await this.loadScriptOnce(withVersion('/public/auto-scroll.js'));
+        await this.loadScriptOnce(withVersion('/public/layout.js'));
     }
 
     detectAssetVersion() {

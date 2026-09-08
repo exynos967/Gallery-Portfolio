@@ -33,6 +33,7 @@ class TagFilter {
         const allTag = document.createElement('button');
         allTag.className = 'tag';
         allTag.textContent = 'All';
+        allTag.dataset.tag = 'all';
         allTag.style.backgroundColor = '#4CAF50'; // 绿色主题色
         allTag.style.color = '#fff';
         allTag.addEventListener('click', () => {
@@ -51,6 +52,7 @@ class TagFilter {
             const tagButton = document.createElement('button');
             tagButton.className = 'tag';
             tagButton.textContent = category;
+            tagButton.dataset.tag = category;
             tagButton.addEventListener('click', () => {
                 this.selectTag(tagButton, category);
                 centerTagButton(tagButton);
@@ -108,12 +110,12 @@ class TagFilter {
     selectTagByValue(tagValue) {
         if (!this.tagContainer) {
             console.error('tagContainer未初始化');
-            return;
+            return false;
         }
         
         const tagButtons = this.tagContainer.querySelectorAll('.tag');
         for (const button of tagButtons) {
-            if (button.textContent.toLowerCase() === tagValue.toLowerCase()) {
+            if (button.dataset.tag === tagValue) {
                 this.selectTag(button, tagValue);
                 // 将选中的标签滚动到中间
                 const containerHeight = this.tagContainer.clientHeight;
@@ -121,9 +123,10 @@ class TagFilter {
                 const btnHeight = button.clientHeight;
                 const scrollTarget = btnOffsetTop - (containerHeight / 2) + (btnHeight / 2);
                 this.tagContainer.scrollTo({ top: scrollTarget, behavior: 'smooth' });
-                break;
+                return true;
             }
         }
+        return false;
     }
 
     // 销毁标签筛选器
@@ -135,4 +138,4 @@ class TagFilter {
 }
 
 // 导出为全局变量
-window.TagFilter = TagFilter; 
+window.TagFilter = TagFilter;

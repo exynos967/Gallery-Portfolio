@@ -139,6 +139,37 @@ test("预览失败后的原图请求仍可随分类切换取消", () => {
   assert.equal(image.onerror, null);
 });
 
+test("中文、空格及保留字符分类 URL 可恢复，筛选仅执行一次且历史不重复写入", () => {
+  const browser = createBrowser();
+  const Gallery = vm.runInContext("Gallery", browser.context);
+  const gallery = Object.create(Gallery.prototype);
+  const selected = [];
+  const category = "旅行 空间?#";
+  const tags = new browser.window.TagFilter((tag) => {
+    selected.push(tag);
+    gallery.updateUrlForTag(tag);
+  });
+  const buttons = ["all", category].map((tag) => ({ dataset: { tag }, style: {}, offsetTop: 0, clientHeight: 10 }));
+  tags.tagContainer = { querySelectorAll: () => buttons, clientHeight: 100, scrollTo() {} };
+  gallery.tagFilter = tags;
+  gallery.dataLoader = { getCategories: () => [category] };
+  gallery.imageLoader = { filterImages: (tag) => selected.push(tag) };
+  browser.window.location = new URL(`https://gallery.example/${encodeURIComponent(category)}?fullscreen=0#anchor`);
+  gallery.handleUrlParams();
+  assert.deepEqual(selected, [category]);
+  assert.deepEqual(browser.history, []);
+
+  browser.window.location = new URL("https://gallery.example/?fullscreen=0#anchor");
+  gallery.handleUrlParams();
+  assert.deepEqual(selected, [category, "all"]);
+  gallery.updateUrlForTag(category);
+  assert.equal(browser.window.location.pathname, `/${encodeURIComponent(category)}`);
+  assert.equal(browser.window.location.search, "?fullscreen=0");
+  assert.equal(browser.window.location.hash, "#anchor");
+  browser.window.location = new URL("https://gallery.example/%ZZ");
+  assert.doesNotThrow(() => gallery.handleUrlParams());
+});
+
 test("显式清空目录和方向可覆盖静态索引的 source 配置", () => {
   const browser = createBrowser();
   const Gallery = vm.runInContext("Gallery", browser.context);

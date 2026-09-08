@@ -4,7 +4,7 @@ class DataLoader {
         this.galleryData = null;
         this.loading = false;
         this.shuffleEnabled = options.shuffleEnabled ?? true;
-        this.galleryIndexUrl = options.galleryIndexUrl || 'gallery-index.json';
+        this.galleryIndexUrl = options.galleryIndexUrl || '/gallery-index.json';
         this.galleryDataApiUrl = options.galleryDataApiUrl || '/api/gallery-data';
         this.galleryDataMode = options.galleryDataMode || 'static';
         this.runtimeSourceConfig = null;
@@ -235,7 +235,7 @@ class DataLoader {
     // 设置索引地址
     setGalleryIndexUrl(url) {
         const normalized = String(url || '').trim();
-        this.galleryIndexUrl = normalized || 'gallery-index.json';
+        this.galleryIndexUrl = normalized || '/gallery-index.json';
     }
 
     // 设置图库数据模式（static / imgbed-api）
