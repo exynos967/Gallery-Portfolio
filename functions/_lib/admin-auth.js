@@ -1,9 +1,6 @@
 import { json } from "./http.js";
 
-const DEFAULT_ADMIN_USERNAME = "admin";
-const DEFAULT_ADMIN_PASSWORD = "admin";
 const DEFAULT_SESSION_HOURS = 24;
-const DEFAULT_SESSION_SECRET = "gallery-admin-secret-change-me";
 
 function toBase64Url(input) {
   const bytes = new TextEncoder().encode(input);
@@ -62,10 +59,28 @@ function secureEqual(a, b) {
 }
 
 export function getAdminUsername(env) {
-  return String(env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim() || DEFAULT_ADMIN_USERNAME;
+  return String(env.ADMIN_USERNAME || "").trim();
+}
+
+export function adminAuthConfigurationError(env) {
+  const passwordHash = String(env.ADMIN_PASSWORD_SHA256 || "").trim();
+  const hasPassword = passwordHash
+    ? /^[a-f0-9]{64}$/i.test(passwordHash)
+    : Boolean(String(env.ADMIN_PASSWORD || "").trim());
+  if (getAdminUsername(env) && hasPassword && getSessionSecret(env)) return null;
+
+  return json(
+    {
+      success: false,
+      error: "admin-auth-not-configured",
+      message: "管理员认证配置不完整，请设置 ADMIN_USERNAME、ADMIN_PASSWORD（或有效的 ADMIN_PASSWORD_SHA256）及 ADMIN_SESSION_SECRET。",
+    },
+    { status: 503 }
+  );
 }
 
 export async function verifyAdminCredentials(env, username, password) {
+  if (adminAuthConfigurationError(env)) return false;
   const expectedUser = getAdminUsername(env);
   if (!secureEqual(username, expectedUser)) {
     return false;
@@ -77,12 +92,12 @@ export async function verifyAdminCredentials(env, username, password) {
     return secureEqual(providedHash, expectedPasswordHash);
   }
 
-  const expectedPassword = String(env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD);
+  const expectedPassword = String(env.ADMIN_PASSWORD || "");
   return secureEqual(String(password || ""), expectedPassword);
 }
 
 function getSessionSecret(env) {
-  return String(env.ADMIN_SESSION_SECRET || DEFAULT_SESSION_SECRET).trim() || DEFAULT_SESSION_SECRET;
+  return String(env.ADMIN_SESSION_SECRET || "").trim();
 }
 
 function getSessionHours(env) {
@@ -92,6 +107,9 @@ function getSessionHours(env) {
 }
 
 export async function issueAdminToken(env, username) {
+  if (adminAuthConfigurationError(env)) {
+    throw new Error("管理员认证配置不完整，无法签发令牌。");
+  }
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + getSessionHours(env) * 3600;
   const payload = {
@@ -109,13 +127,16 @@ export async function issueAdminToken(env, username) {
 }
 
 export async function verifyAdminToken(env, token) {
+  if (adminAuthConfigurationError(env)) {
+    return { valid: false, reason: "admin-auth-not-configured" };
+  }
   const rawToken = String(token || "").trim();
   if (!rawToken.includes(".")) {
     return { valid: false, reason: "invalid-token-format" };
   }
 
-  const [encodedPayload, signature] = rawToken.split(".");
-  if (!encodedPayload || !signature) {
+  const [encodedPayload, signature, extra] = rawToken.split(".");
+  if (!encodedPayload || !signature || extra !== undefined) {
     return { valid: false, reason: "invalid-token-format" };
   }
 
@@ -132,8 +153,12 @@ export async function verifyAdminToken(env, token) {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (!payload?.exp || payload.exp < now) {
+  if (!Number.isFinite(payload?.exp) || payload.exp <= now) {
     return { valid: false, reason: "token-expired" };
+  }
+
+  if (payload.u !== getAdminUsername(env)) {
+    return { valid: false, reason: "invalid-user" };
   }
 
   return { valid: true, payload };
@@ -150,6 +175,9 @@ export function readBearerToken(request) {
 }
 
 export async function requireAdmin(request, env) {
+  const configurationError = adminAuthConfigurationError(env);
+  if (configurationError) return { ok: false, response: configurationError };
+
   const token = readBearerToken(request);
   if (!token) {
     return {

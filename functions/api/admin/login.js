@@ -1,4 +1,4 @@
-import { getAdminUsername, issueAdminToken, verifyAdminCredentials } from "../../_lib/admin-auth.js";
+import { adminAuthConfigurationError, getAdminUsername, issueAdminToken, verifyAdminCredentials } from "../../_lib/admin-auth.js";
 import { json, noContent, readJson } from "../../_lib/http.js";
 
 export function onRequestOptions() {
@@ -7,6 +7,9 @@ export function onRequestOptions() {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const configurationError = adminAuthConfigurationError(env);
+  if (configurationError) return configurationError;
+
   const body = await readJson(request);
   const username = String(body?.username || "").trim();
   const password = String(body?.password || "");
