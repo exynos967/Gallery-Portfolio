@@ -170,6 +170,34 @@ test("中文、空格及保留字符分类 URL 可恢复，筛选仅执行一次
   assert.doesNotThrow(() => gallery.handleUrlParams());
 });
 
+test("初始化等待新配置，网络失败时使用旧配置且不延长缓存寿命", async () => {
+  for (const successful of [true, false]) {
+    const browser = createBrowser();
+    const Gallery = vm.runInContext("Gallery", browser.context);
+    const gallery = Object.create(Gallery.prototype);
+    const oldConfig = { displayMode: "fullscreen", galleryDataMode: "static", site: { title: "old" } };
+    const freshConfig = { displayMode: "fullscreen", galleryDataMode: "imgbed-api", site: { title: "new" } };
+    const cached = JSON.stringify({ config: oldConfig, _cachedAt: Date.now() - 1000 });
+    browser.storage.set("gallery-remote-config", cached);
+    let resolveConfig;
+    const applied = [];
+    gallery.fetchRemoteConfig = () => new Promise((resolve) => { resolveConfig = resolve; });
+    gallery.applyCachedSiteBoot = () => {};
+    gallery.applyRemoteConfigToPage = () => {};
+    gallery.applyRemoteConfigToDataLoader = (config) => applied.push(config);
+    gallery.getUploadSettings = () => ({});
+    gallery.applyBootDisplayMode = () => {};
+    gallery.initSingleImageMode = async () => {};
+    gallery.dataLoader = { setShuffleEnabled() {}, hasRandomApi: () => true };
+    const init = gallery.init();
+    assert.equal(applied.length, 0);
+    resolveConfig(successful ? freshConfig : null);
+    await init;
+    assert.equal(applied[0].site.title, successful ? "new" : "old");
+    if (!successful) assert.equal(browser.storage.get("gallery-remote-config"), cached);
+  }
+});
+
 test("显式清空目录和方向可覆盖静态索引的 source 配置", () => {
   const browser = createBrowser();
   const Gallery = vm.runInContext("Gallery", browser.context);
@@ -179,6 +207,30 @@ test("显式清空目录和方向可覆盖静态索引的 source 配置", () => 
   gallery.applyRemoteConfigToDataLoader({ imgbed: { listDir: "", randomOrientation: "" } });
   assert.equal(gallery.dataLoader.getConfiguredListDir(), "");
   assert.equal(gallery.dataLoader.getConfiguredRandomOrientation(), "");
+});
+
+test("没有 AbortSignal.timeout 的浏览器仍请求配置，预取结果可复用", async () => {
+  const browser = createBrowser();
+  const Gallery = vm.runInContext("Gallery", browser.context);
+  const gallery = Object.create(Gallery.prototype);
+  const config = { displayMode: "waterfall" };
+  let calls = 0;
+  browser.context.fetch = async (_url, options) => {
+    calls++;
+    assert.equal(options.cache, "no-store");
+    assert.ok(options.signal);
+    return Response.json({ config });
+  };
+  assert.deepEqual(await gallery.fetchRemoteConfig(), config);
+  assert.equal(calls, 1);
+
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const inlineScripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map((match) => match[1]);
+  const prefetch = inlineScripts.find((script) => script.includes("__galleryPublicConfigPromise"));
+  vm.runInContext(prefetch, browser.context);
+  assert.deepEqual(await gallery.fetchRemoteConfig(), config);
+  assert.equal(calls, 2);
+  assert.equal(browser.window.__galleryPublicConfigPromise, null);
 });
 
 test("静态索引再次筛选子目录时兼容完整路径与旧相对路径", () => {

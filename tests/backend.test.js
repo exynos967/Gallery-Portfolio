@@ -94,6 +94,45 @@ test("显式 D1/KV 绑定缺失时拒绝读写，并返回可识别的 HTTP 配�
   }
 });
 
+test("配置经管理 API 保存到 KV；显式空值覆盖环境默认值，公开结果不包含令牌", async () => {
+  const env = makeEnv({
+    DEFAULT_IMGBED_LIST_DIR: "old-folder",
+    DEFAULT_IMGBED_API_TOKEN: "test-upstream-token",
+    DEFAULT_IMGBED_RANDOM_ORIENTATION: "landscape",
+    DEFAULT_SITE_IMAGE_URL: "old-logo.png",
+  });
+  const { token } = await issueAdminToken(env, env.ADMIN_USERNAME);
+  const response = await writeConfig({ env, request: request("/api/admin/config", {
+    token, method: "PUT", body: {
+      domain: "gallery.example",
+      config: {
+        displayMode: "waterfall", shuffleEnabled: false,
+        imgbed: { listDir: "", apiToken: "", randomOrientation: "" },
+        site: { imageUrl: "" },
+      },
+    },
+  }) });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).data.storageBackend, "kv");
+
+  const read = await readConfig({ env: { ...env }, request: request("/api/admin/config", { token }) });
+  const { data } = await read.json();
+  assert.equal(data.config.imgbed.listDir, "");
+  assert.equal(data.config.imgbed.apiToken, "");
+  assert.equal(data.config.imgbed.randomOrientation, "");
+  assert.equal(data.config.site.imageUrl, "");
+  assert.equal(data.config.shuffleEnabled, false);
+
+  const publicResponse = await publicConfig({ env, request: request("/api/public-config") });
+  assert.equal(publicResponse.headers.get("Cache-Control"), "no-store");
+  const first = await publicResponse.json();
+  assert.equal(first.config.displayMode, "waterfall");
+  assert.equal("apiToken" in first.config.imgbed, false);
+  await saveDomainConfig(env, "gallery.example", { displayMode: "fullscreen" });
+  const second = await publicConfig({ env, request: request("/api/public-config") });
+  assert.equal((await second.json()).config.displayMode, "fullscreen");
+});
+
 test("老配置中未提供的字段仍可继承环境默认值", async () => {
   const env = makeEnv({ DEFAULT_IMGBED_LIST_DIR: "default-folder" });
   await env.GALLERY_CONFIG_KV.put("domain:gallery.example", JSON.stringify({ imgbed: {} }));

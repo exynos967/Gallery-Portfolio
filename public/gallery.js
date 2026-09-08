@@ -60,15 +60,10 @@ class Gallery {
 
         this.applyCachedSiteBoot();
 
-        // 远端配置缓存：首访仍会拉取，但后续访问可直接命中 localStorage，显著提升首屏速度。
-        const cachedConfig = this.readCachedRemoteConfig();
-        if (cachedConfig) {
-            this.remoteConfig = cachedConfig;
-            this.refreshRemoteConfigInBackground();
-        } else {
-            this.remoteConfig = await this.fetchRemoteConfig();
-            this.persistRemoteConfig(this.remoteConfig);
-        }
+        // 影响初始化的配置以本次请求为准；网络失败时才使用缓存。
+        const freshConfig = await this.fetchRemoteConfig();
+        this.remoteConfig = freshConfig || this.readCachedRemoteConfig();
+        this.persistRemoteConfig(freshConfig);
 
         this.applyRemoteConfigToPage(this.remoteConfig);
         this.applyRemoteConfigToDataLoader(this.remoteConfig);
@@ -825,17 +820,19 @@ class Gallery {
                 const promise = window.__galleryPublicConfigPromise;
                 window.__galleryPublicConfigPromise = null;
                 const payload = await promise;
-                if (payload?.config) {
-                    return payload.config;
-                }
+                return payload?.config || null;
             } catch (error) {
                 console.warn('复用预取配置失败，改为直接请求:', error);
             }
         }
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
         try {
             const response = await fetch('/api/public-config', {
                 method: 'GET',
+                cache: 'no-store',
+                signal: controller.signal,
                 headers: {
                     Accept: 'application/json',
                 },
@@ -850,6 +847,8 @@ class Gallery {
         } catch (error) {
             console.warn('获取远端配置失败，使用本地默认配置:', error);
             return null;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
@@ -886,20 +885,6 @@ class Gallery {
         } catch {
             // ignore
         }
-    }
-
-    refreshRemoteConfigInBackground() {
-        this.fetchRemoteConfig()
-            .then((freshConfig) => {
-                if (!freshConfig) return;
-                this.persistRemoteConfig(freshConfig);
-                // 静默更新轻量 UI（标题、logo）
-                this.applyRemoteConfigToPage(freshConfig);
-                this.remoteConfig = freshConfig;
-            })
-            .catch(() => {
-                // ignore
-            });
     }
 
     guessImageMimeType(imageUrl) {
